@@ -1,0 +1,9 @@
+DJANGO-MARIONET
+
+Marionet for Django.
+
+To run the test suite, run <tt>make test</tt> but please make sure django-portlets is found from <tt>../django-portlets</tt>,
+parallel to this directory.
+
+  hg clone https://lamikae@bitbucket.org/lamikae/django-portlets/
+
