@@ -1,3 +1,3 @@
 DJANGO-MARIONET
 
-stay tuned
+stay tuned .. for more 
