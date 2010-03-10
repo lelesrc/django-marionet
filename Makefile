@@ -1,4 +1,4 @@
 test:
-	PYTHONPATH=`pwd`:../django-portlets DJANGO_SETTINGS_MODULE=settings python test/test_helper.py 
+	PYTHONPATH=`pwd`:`pwd`/../django-portlets DJANGO_SETTINGS_MODULE=test.settings django-admin.py test
 
 .PHONY: test
