@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 For a given Django application, the test runner looks for
 unit tests in two places:

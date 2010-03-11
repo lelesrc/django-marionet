@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # django imports
 from django import forms
 from django.contrib.contenttypes.models import ContentType
