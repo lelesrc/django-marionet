@@ -11,8 +11,7 @@ unit tests in two places:
       subclass of ``unittest.TestCase`` in this module.
 """
 
-DEBUG = False
-#TEMPLATE_DIRS = ('')
+DEBUG = True
 DATABASES = {
     'default': {
         'ENGINE':    'django.db.backends.sqlite3',
@@ -27,3 +26,5 @@ INSTALLED_APPS = (
     'portlets.example',
     'marionet',
 )
+ROOT_URLCONF = 'test.portal.urls'
+TEMPLATE_DIRS = ('test/portal/templates')
