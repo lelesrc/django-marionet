@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# Test portal views
 
 # python imports
 import sys
@@ -21,8 +22,16 @@ from django.template.loader import render_to_string
 from django.utils import translation
 from django.utils.translation import ugettext_lazy as _
 
+# portlets imports
+from portlets.utils import get_registered_portlets
+from portlets.utils import get_slots
+from portlets.models import PortletAssignment
+from portlets.models import PortletBlocking
+from portlets.models import PortletRegistration
+from portlets.models import Slot
 
-#def index(request, obj, template_name="lfc/portal.html"):
+from marionet.models import TextPortlet
+
 def index(request):
     """Displays the the portal.
     """
@@ -30,4 +39,9 @@ def index(request):
     return HttpResponse("all ok :)")
 
 def site(request):
-    return render_to_response('site.html')
+    portlet = TextPortlet.objects.create(title="Portlet title",text="Content")
+
+    return render_to_response("site.html", RequestContext(request, {
+        "portlet" : portlet,
+    }))
+
