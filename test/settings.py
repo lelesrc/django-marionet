@@ -22,9 +22,15 @@ DATABASES = {
 INSTALLED_APPS = (
     'django.contrib.contenttypes',
     'django.contrib.flatpages',
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.sessions',
+    'django.contrib.sites',
     'portlets',
     'portlets.example',
     'marionet',
 )
 ROOT_URLCONF = 'test.portal.urls'
 TEMPLATE_DIRS = ('test/portal/templates')
+SITE_ID = 1
+
