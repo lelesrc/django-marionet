@@ -2,8 +2,12 @@ DJANGO-MARIONET
 
 Marionet for Django.
 
-To run the test suite, run <tt>make test</tt> but please make sure django-portlets is found from <tt>../django-portlets</tt>,
-parallel to this directory.
+== Testing
+Django and django-portlets should be installed to the system. Unless django-portlets is in <tt>PYTHONPATH</tt>,
+create a symlink 'portlets' to the project root directory, pointing to <tt>django-portlets/portlets</tt> directory.
 
+Django-portlets can be cloned here:
   hg clone https://lamikae@bitbucket.org/lamikae/django-portlets/
+
+To run the full test suite for both marionet and django-portlets, run <tt>make test</tt>.
 

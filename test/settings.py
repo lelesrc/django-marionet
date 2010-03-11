@@ -23,5 +23,7 @@ DATABASES = {
 INSTALLED_APPS = (
     'django.contrib.contenttypes',
     'django.contrib.flatpages',
+    'portlets',
+    'portlets.example',
     'marionet',
 )

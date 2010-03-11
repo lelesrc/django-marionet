@@ -18,6 +18,8 @@ from portlets.models import PortletRegistration
 from portlets.models import Slot
 import portlets.utils
 
+from marionet.models import TextPortlet
+
 class PortletTest(unittest.TestCase):
 
     def setUp(self):
