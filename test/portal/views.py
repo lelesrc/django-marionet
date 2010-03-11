@@ -33,14 +33,10 @@ from portlets.models import Slot
 from marionet.models import TextPortlet
 
 def index(request):
-    """Displays the the portal.
-    """
-    #return render_to_response(template_name, RequestContext(request, {    }))
-    return HttpResponse("all ok :)")
+    return HttpResponse("hello world")
 
-def site(request):
+def test_portlet(request):
     portlet = TextPortlet.objects.create(title="Portlet title",text="Content")
-
     return render_to_response("site.html", RequestContext(request, {
         "portlet" : portlet,
     }))

@@ -1,11 +1,11 @@
 test: syncdb
-	PYTHONPATH=`pwd`:`pwd`/../django-portlets DJANGO_SETTINGS_MODULE=test.settings django-admin.py test
+	PYTHONPATH=`pwd` DJANGO_SETTINGS_MODULE=test.settings django-admin.py test
 
 syncdb:
-	PYTHONPATH=`pwd`:`pwd`/../django-portlets DJANGO_SETTINGS_MODULE=test.settings django-admin.py syncdb
+	PYTHONPATH=`pwd` DJANGO_SETTINGS_MODULE=test.settings django-admin.py syncdb
 
 runserver: syncdb
-	PYTHONPATH=`pwd`:`pwd`/../django-portlets DJANGO_SETTINGS_MODULE=test.settings django-admin.py runserver
+	PYTHONPATH=`pwd` DJANGO_SETTINGS_MODULE=test.settings django-admin.py runserver
 
 
 .PHONY: test
