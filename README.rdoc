@@ -1,6 +1,7 @@
-DJANGO-MARIONET
-
-Marionet for Django. Marionet is a portlet that operates with a remote web app.
+= DJANGO-MARIONET
+Marionet is a portlet that operates with a remote web app.
+Functionally it replicates a "Rails-portlet"[http://github.com/lamikae/rails-portlet] in Liferay environment.
+Django seems a good environment to imitate this approach to idea of using many mini-applications side by side in portlets, where the apps are configured by a web url and additional parameters. Security is based on cookies and a shared secret between the remote server and the portlet HTTP client. In theory capturing XHR would work as well.
 
 == Install requirements
 Django 1.2 should be installed to the system.
@@ -16,10 +17,9 @@ For now the release from easy_install works since the fork has no functional cha
 Django-portlets can be found at http://bitbucket.org/lamikae/django-portlets
 
 == Running the test portal
-The test portal consists of one view, /demo
-Start the server
+The test portal consists of one view. Start the server
   make runserver
-Open http://localhost:8000/demo in the browser.
+Navigate to http://localhost:8000/demo 
 
 == Testing
 Use <tt>make test</tt> to run the tests.
