@@ -4,21 +4,21 @@ Marionet for Django. Marionet is a portlet that operates with a remote web app.
 
 == Install requirements
 Django 1.2 should be installed to the system.
-Older versions need modifications to +test/settings.py+.
+Older versions need modifications to <tt>test/settings.py</tt>.
 
 Unless django-portlets is in <tt>PYTHONPATH</tt>, run the command
-  $ make portlets
+  make portlets
 to download and update the source from mercurial at bitbucket. 
 The command creates a symlink 'portlets' to the project root directory.
 
 For now the release from easy_install works since the fork has no functional changes.
 
-Django-portlets can be found at http://bitbucket.org/lamikae/django-portlets/
+Django-portlets can be found at http://bitbucket.org/lamikae/django-portlets
 
 == Running the test portal
 The test portal consists of one view, /demo
 Start the server
-  $ make runserver
+  make runserver
 Open http://localhost:8000/demo in the browser.
 
 == Testing
