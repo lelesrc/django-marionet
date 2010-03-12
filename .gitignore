@@ -1,2 +1,4 @@
 *.pyc
 maindb
+portlets
+vendor
