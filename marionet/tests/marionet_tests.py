@@ -14,6 +14,8 @@ from portlets.models import Slot
 import portlets.utils
 
 from marionet.models import Marionet
+from marionet import log
+log.setlevel('critical')
 
 class MarionetTestCase(TestCase):
 

@@ -40,6 +40,9 @@ class Log:
 
     def __init__(self, level='info'):
         """Create a logger with the given severity level."""
+        self.setlevel(level)
+
+    def setlevel(self,level):
         self.level = level
 
     def message(self, level, text):
