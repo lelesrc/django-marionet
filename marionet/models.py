@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Models copied from django-portlets (BSD license)
+# TextPortlet copied from django-portlets (BSD license)
 # author: diefenbach
 #
 
@@ -11,6 +11,38 @@ from django.template.loader import render_to_string
 from django.utils.translation import ugettext_lazy as _
 
 from portlets.models import Portlet
+from portlets.utils import register_portlet
+
+class Marionet(Portlet):
+    """A simple portlet to display some text.
+    """
+    name   = u"help"
+    url    = models.TextField(u"url",    blank=True)
+    params = models.TextField(u"params", blank=True)
+
+    def __unicode__(self):
+        return "%s" % self.name
+
+    def render(self, context=None):
+        """Renders the portlet as html.
+        """
+        return ""
+
+    def form(self, **kwargs):
+        """
+        """
+        return MarionetForm(instance=self, **kwargs)
+
+class MarionetForm(forms.ModelForm):
+    """Form for Marionet.
+    """
+    class Meta:
+        model = Marionet
+
+register_portlet(Marionet, "Marionet")
+
+
+### TEXT PORTLET (useful to study how it works)
 
 class TextPortlet(Portlet):
     """A simple portlet to display some text.
@@ -38,6 +70,5 @@ class TextPortletForm(forms.ModelForm):
     """
     class Meta:
         model = TextPortlet
-        
-from portlets.utils import register_portlet
+
 register_portlet(TextPortlet, "TextPortlet")
