@@ -28,4 +28,12 @@ class MarionetTestCase(TestCase):
         mn_portlet = Marionet() # no database object creation
         self.assert_(mn_portlet)
         self.assertEqual("help",mn_portlet.name)
-        self.assertEqual("marionet/help.html",mn_portlet.route)
+        #self.assertEqual("marionet/help.html",mn_portlet.route)
+        self.assertNotEqual(None,mn_portlet.render())
+
+    def test_filter(self):
+        """ Filter is not instantiated, this is not Java.
+        It is the __call__ method of Marionet.
+        """
+        mn_portlet = Marionet()
+        self.assert_(mn_portlet)

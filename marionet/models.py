@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 #
-# TextPortlet copied from django-portlets (BSD license)
-# author: diefenbach
 #
 
 # django imports
@@ -14,6 +12,30 @@ from portlets.models import Portlet
 from portlets.utils import register_portlet
 
 from marionet import log, Config
+
+def portlet_filter(function=None):
+    """
+    Filter for portlet requests.
+    http://passingcuriosity.com/2009/writing-view-decorators-for-django/
+    """
+    def _dec(view_func):
+        def _filter(request, *args, **kwargs):
+            log.debug("portlet_filter activated")
+            #log.info(request.user)
+            #log.info(request.REQUEST)
+            return view_func(request, *args, **kwargs)
+
+        _filter.__name__ = view_func.__name__
+        _filter.__dict__ = view_func.__dict__
+        _filter.__doc__  = view_func.__doc__
+
+        return _filter
+
+    if function is None:
+        return _dec
+    else:
+        return _dec(function)
+
 
 class Marionet(Portlet):
     """A simple portlet to display some text.
@@ -31,16 +53,9 @@ class Marionet(Portlet):
         log.info("Marionet %s version %s" % (self.name,self.VERSION))
         self.config = Config()
 
-    def __call__(self,func):
-        """
-        Filter.
-        Prepares the state of the Marionet object.
-        """
-        log.debug("Filter activated")
-        return func
-
+    @portlet_filter
     def render(self, context=None):
-        """Renders the portlet as html.
+        """
         """
         log.debug("View "+self.name)
         return ""
@@ -63,6 +78,8 @@ register_portlet(Marionet, "Marionet")
 
 class TextPortlet(Portlet):
     """A simple portlet to display some text.
+    TextPortlet copied from django-portlets (BSD license)
+    author: diefenbach
     """
     text = models.TextField(_(u"Text"), blank=True)
 
