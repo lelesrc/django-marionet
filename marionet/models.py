@@ -13,9 +13,13 @@ from django.utils.translation import ugettext_lazy as _
 from portlets.models import Portlet
 from portlets.utils import register_portlet
 
+from marionet import log, Config
+
 class Marionet(Portlet):
     """A simple portlet to display some text.
     """
+    VERSION = '0.0.1'
+
     name   = u"help"
     url    = models.TextField(u"url",    blank=True)
     params = models.TextField(u"params", blank=True)
@@ -23,9 +27,22 @@ class Marionet(Portlet):
     def __unicode__(self):
         return "%s" % self.name
 
+    def __init__(self):
+        log.info("Marionet %s version %s" % (self.name,self.VERSION))
+        self.config = Config()
+
+    def __call__(self,func):
+        """
+        Filter.
+        Prepares the state of the Marionet object.
+        """
+        log.debug("Filter activated")
+        return func
+
     def render(self, context=None):
         """Renders the portlet as html.
         """
+        log.debug("View "+self.name)
         return ""
 
     def form(self, **kwargs):
