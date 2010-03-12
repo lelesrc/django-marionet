@@ -9,11 +9,13 @@ runserver: syncdb
 
 portlets:
 	-mkdir vendor
-	if [ -e vendor/django-portlets ]; then \
-		cd vendor/django-portlets && hg pull ;\
-	else \
+	if [ ! -e vendor/django-portlets ]; then \
 		cd vendor && hg clone https://lamikae@bitbucket.org/lamikae/django-portlets/ ;\
-		ln -s vendor/django-portlets/portlets . ;\
+	else \
+		cd vendor/django-portlets && hg pull ;\
 	fi
+	if [ ! -e portlets ]; then ln -s vendor/django-portlets/portlets . ; fi
+
+
 
 .PHONY: test syncdb runserver portlets
