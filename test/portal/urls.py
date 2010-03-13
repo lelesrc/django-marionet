@@ -8,7 +8,8 @@ admin.autodiscover()
 urlpatterns = patterns('',
     (r'^admin/', include(admin.site.urls)),
 
-    (r'^demo',    'test.portal.views.test_portlet'),
+    (r'^demo',    'test.portal.views.text_portlet'),
+    (r'^hack',    'test.portal.views.marionet'),
     (r'^portal/', 'test.portal.views.index'),
 
 )

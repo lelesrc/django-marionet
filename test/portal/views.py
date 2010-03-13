@@ -35,9 +35,11 @@ from marionet.models import TextPortlet
 def index(request):
     return HttpResponse("hello world")
 
-def test_portlet(request):
+def text_portlet(request):
     portlet = TextPortlet.objects.create(title="Portlet title",text="Content")
     return render_to_response("site.html", RequestContext(request, {
         "portlet" : portlet,
     }))
 
+def marionet(request):
+    return HttpResponse("")
