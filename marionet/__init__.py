@@ -34,7 +34,7 @@ class Log:
     _levels = {
         'debug': 1,
         'info': 2,
-        'warning': 3,
+        'warn': 3,
         'error': 4,
         'critical': 5}
 
@@ -58,9 +58,9 @@ class Log:
         """Log an informational message."""
         self.message('info', text)
 
-    def warning(self, text):
+    def warn(self, text):
         """Log a warning message."""
-        self.message('warning', "WARNING: " + text)
+        self.message('warn', "WARNING: " + text)
 
     def error(self, text):
         """Log an error message."""

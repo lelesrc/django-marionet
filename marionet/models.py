@@ -58,6 +58,10 @@ class Marionet(Portlet):
         """
         """
         log.debug("View "+self.name)
+        if context is None:
+            log.warn('empty context')
+        else:
+            log.debug(context)
         return ""
 
     def form(self, **kwargs):
