@@ -5,6 +5,7 @@
 # django imports
 from django import forms
 from django.db import models
+from django.template import RequestContext
 from django.template.loader import render_to_string
 from django.utils.translation import ugettext_lazy as _
 
@@ -13,17 +14,34 @@ from portlets.utils import register_portlet
 
 from marionet import log, Config
 
-def portlet_filter(function=None):
+class PortletFilter():
     """
-    Filter for portlet requests.
-    http://passingcuriosity.com/2009/writing-view-decorators-for-django/
+    Embodies a state in __config, that is loaded only once during startup.
     """
-    def _dec(view_func):
-        def _filter(request, *args, **kwargs):
-            log.debug("portlet_filter activated")
-            #log.info(request.user)
-            #log.info(request.REQUEST)
-            return view_func(request, *args, **kwargs)
+    __config = {'pi': 3.14}
+    #__metaclass__ = metaclass.SingletonMetaClass
+
+    def __init__(self):
+        log.debug("RenderFilter initialized")
+
+    @staticmethod
+    def render_filter(view_func):
+        """
+        Filter for portlet render requests.
+
+        By applying decorator @render_filter into Portlet methods,
+        this will let the _filter() function to call the desired method
+        with custom arguments.
+
+        Returns a function.
+        """
+        def _filter(this, *args, **kwargs):
+            log.debug("render_filter activated")
+            request = None
+            # hardwire config to context
+            ctx = RequestContext(request, PortletFilter.__config)
+            #log.debug(ctx)
+            return view_func(this, ctx)
 
         _filter.__name__ = view_func.__name__
         _filter.__dict__ = view_func.__dict__
@@ -31,10 +49,9 @@ def portlet_filter(function=None):
 
         return _filter
 
-    if function is None:
-        return _dec
-    else:
-        return _dec(function)
+def render_filter(this, *args, **kwargs):
+    """Accessing the Borg."""
+    return PortletFilter.render_filter(this, *args, **kwargs)
 
 
 class Marionet(Portlet):
@@ -53,16 +70,14 @@ class Marionet(Portlet):
         log.info("Marionet %s version %s" % (self.name,self.VERSION))
         self.config = Config()
 
-    @portlet_filter
-    def render(self, context=None):
-        """
+    @render_filter
+    def render(self, context):
+        """Renders the portlet as HTML.
         """
         log.debug("View "+self.name)
-        if context is None:
-            log.warn('empty context')
-        else:
-            log.debug(context)
-        return ""
+        #request = context.get("request")
+        #log.debug(context)
+        return context.__str__
 
     def form(self, **kwargs):
         """
