@@ -12,6 +12,7 @@ unit tests in two places:
 """
 
 DEBUG = True
+TEST_LOG_LEVEL = 'critical'
 DATABASES = {
     'default': {
         'ENGINE':    'django.db.backends.sqlite3',

@@ -15,7 +15,8 @@ import portlets.utils
 
 from marionet.models import Marionet
 from marionet import log
-log.setlevel('critical')
+from test.settings import TEST_LOG_LEVEL
+log.setlevel(TEST_LOG_LEVEL)
 
 class MarionetTestCase(TestCase):
 
