@@ -49,10 +49,6 @@ class PortletFilter():
 
         return _filter
 
-def render_filter(this, *args, **kwargs):
-    """Accessing the Borg."""
-    return PortletFilter.render_filter(this, *args, **kwargs)
-
 
 class Marionet(Portlet):
     """A simple portlet to display some text.
@@ -70,7 +66,7 @@ class Marionet(Portlet):
         log.info("Marionet %s version %s" % (self.name,self.VERSION))
         self.config = Config()
 
-    @render_filter
+    @PortletFilter.render_filter
     def render(self, context):
         """Renders the portlet as HTML.
         """
