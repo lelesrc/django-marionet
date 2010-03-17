@@ -25,17 +25,25 @@ import inspect
 class MarionetTestCase(TestCase):
 
     def setUp(self):
-        pass
+        self.session_secret='xxx'
 
     def test_defaults(self):
         """
         """
-        return
-        mn_portlet = Marionet() # no database object creation
+        mn_portlet = Marionet()
         self.assert_(mn_portlet)
-        self.assertEqual("help",mn_portlet.name)
-        #self.assertEqual("marionet/help.html",mn_portlet.route)
-        self.assertNotEqual(None,mn_portlet.render())
+        self.assertEqual(None,mn_portlet.session_secret)
+        out = mn_portlet.render() # calls filter + changes state!
+        self.assertNotEqual(None,out)
+
+    def test_secret(self):
+        """
+        """
+        mn_portlet = Marionet(session_secret=self.session_secret)
+        self.assert_(mn_portlet)
+        self.assertEqual(self.session_secret,mn_portlet.session_secret)
+        out = mn_portlet.render() # calls filter + changes state!
+        self.assertNotEqual(None,out)
 
     def test_portlet_filter(self):
         """Portlet Filter.

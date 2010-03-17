@@ -55,24 +55,29 @@ class Marionet(Portlet):
     """
     VERSION = '0.0.1'
 
-    name   = u"help"
-    url    = models.TextField(u"url",    blank=True)
-    params = models.TextField(u"params", blank=True)
+    url        = models.TextField(u"url",        blank=True)
+    req_method = models.TextField(u"req_method", blank=True)
+    referer    = models.TextField(u"referer",    blank=True)
+
+    # session secret for security given at init, not stored to DB
+    session_secret = None
 
     def __unicode__(self):
-        return "%s" % self.name
+        return "%s" % self.url
 
-    def __init__(self):
-        log.info("Marionet %s version %s" % (self.name,self.VERSION))
-        self.config = Config()
+    def __init__(self, *args, **kwargs):
+        log.info("Marionet '%s' version %s" % ('',self.VERSION))
+        if 'session_secret' in kwargs:
+            self.session_secret = kwargs['session_secret']
 
     @PortletFilter.render_filter
     def render(self, context):
         """Renders the portlet as HTML.
         """
-        log.debug("View "+self.name)
-        #request = context.get("request")
         #log.debug(context)
+        #request = context.get("request")
+        #url = #get from context
+        #log.debug("View "+url)
         return context.__str__
 
     def form(self, **kwargs):
