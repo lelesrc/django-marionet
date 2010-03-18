@@ -15,15 +15,7 @@ from portlets.utils import register_portlet
 from marionet import log, Config
 
 class PortletFilter():
-    """
-    Embodies a state in __config, that is loaded only once during startup.
-    """
-    __config = {'pi': 3.14}
-    #__metaclass__ = metaclass.SingletonMetaClass
-
-    def __init__(self):
-        log.debug("RenderFilter initialized")
-
+    """ This is still a mess. """
     @staticmethod
     def render_filter(view_func):
         """
@@ -35,13 +27,24 @@ class PortletFilter():
 
         Returns a function.
         """
-        def _filter(this, *args, **kwargs):
+        #config = kwargs['config']
+        #log.debug('config: %s' % (config))
+        def _filter(ctx, *args, **kwargs):
             log.debug("render_filter activated")
+            if not 'config' is kwargs:
+                config = {'pi':3.14159}
+                log.info("no config")
+            else:
+                config = kwargs['config']
+                log.debug(config)
+
             request = None
             # hardwire config to context
-            ctx = RequestContext(request, PortletFilter.__config)
             #log.debug(ctx)
-            return view_func(this, ctx)
+            # oops!
+            #ctx = RequestContext(request, config)
+            #log.debug(ctx)
+            return view_func(ctx,config,*args,**kwargs)
 
         _filter.__name__ = view_func.__name__
         _filter.__dict__ = view_func.__dict__
@@ -49,9 +52,14 @@ class PortletFilter():
 
         return _filter
 
+class MarionetFilter(PortletFilter):
+    """ Not used. """
+    def __init__(self, *args, **kwargs):
+        Portlet.__init__(self)
+        log.info("Marionet '%s' version %s" % ('',self.VERSION))
 
 class Marionet(Portlet):
-    """A simple portlet to display some text.
+    """ This is still a mess.
     """
     VERSION = '0.0.1'
 
@@ -61,20 +69,40 @@ class Marionet(Portlet):
 
     # session secret for security given at init, not stored to DB
     session_secret = None
+    
+    # uhm..
+    __portlet_filter__ = None
 
     def __unicode__(self):
         return "%s" % self.url
 
     def __init__(self, *args, **kwargs):
+        Portlet.__init__(self)
         log.info("Marionet '%s' version %s" % ('',self.VERSION))
+
         if 'session_secret' in kwargs:
             self.session_secret = kwargs['session_secret']
 
-    @PortletFilter.render_filter
-    def render(self, context):
-        """Renders the portlet as HTML.
+    def __config__(self):
+        """ Portlet should handle conf from text file """
+        print "config"
+        return {'url': 'http://0.0.0.0:8000/test'}
+
+    def my_render_filter(self,*args,**kwargs):
+        """ Loaded apparently only once at startup. """
+        log.debug(" -- PREFILTER -- ") # the message never appers
+        print "ehm" # well but this does, at startup
+        #kwargs['config'] = {'hm':0} # need to think of passing config
+        
+        return PortletFilter.render_filter(self,*args,**kwargs)
+
+    @my_render_filter
+    def render(self, context=None):
         """
-        #log.debug(context)
+        """
+        log.debug(" -- RENDER -- ")
+        #log.debug(self)
+        log.debug(context)
         #request = context.get("request")
         #url = #get from context
         #log.debug("View "+url)
