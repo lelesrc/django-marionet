@@ -22,6 +22,24 @@ log.setlevel(TEST_LOG_LEVEL)
 
 import inspect
 
+class WebClientTestCase(TestCase):
+    def setUp(self):
+        self.junit_url = 'http://localhost:3000/caterpillar/test_bench/junit'
+
+    def test_get(self):
+        """ Java test:
+        client = new OnlineClient(new URL(railsJUnitURL));
+        assertNotNull(client);
+        byte[] body = client.get();
+        assertEquals(200,client.statusCode);
+        assertEquals(0,client.cookies.length);
+        """
+        client = WebClient()
+        self.assert_(client)
+        (status_code, response) = client.get(url=self.junit_url)
+        self.assertEqual(200, status_code)
+        self.assertEqual(0, len(response.cookies()))
+
 class MarionetTestCase(TestCase):
 
     def setUp(self):
