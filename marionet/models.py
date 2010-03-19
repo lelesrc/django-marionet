@@ -121,6 +121,27 @@ class MarionetForm(forms.ModelForm):
 
 register_portlet(Marionet, "Marionet")
 
+class WebClient():
+    """ Modeled after OnlineClient in html2jsr286.
+    Handles state maintenance, in that after each request
+    cookies are updated.
+    """
+    cookies = None
+    locale  = None
+
+    def __init__(self,*args,**kwargs):
+        """ Store cookies and locale to the instance. """
+        if 'cookies' in kwargs:
+            self.cookies = kwargs['cookies']
+        if 'locale' in kwargs:
+            self.locale = kwargs['locale']
+
+    def get(self,url,referer=None):
+        """ Execute GET request.
+        Returns a tuple of (status_code, response).
+        """
+        return (500, None)
+
 
 ### TEXT PORTLET (useful to study how it works)
 
