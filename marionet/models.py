@@ -128,36 +128,86 @@ class WebClient():
     Handles state maintenance, in that after each request
     cookies are updated.
     """
-    cookies = []
-    locale  = None
 
     def __init__(self,*args,**kwargs):
-        """ Store cookies and locale to the instance. """
+        """ Store cookies to the instance. """
         if 'cookies' in kwargs:
             self.cookies = kwargs['cookies']
-        if 'locale' in kwargs:
-            self.locale = kwargs['locale']
+        else:
+            self.cookies = {}
 
         #self.__config = httpclient.Configuration()
         #config.set_trust_store("/path/to/verisign/ca.pem")
+
+    def update_cookies(self,response):
+        """ Update cookies from HTTP response header 'Set-Cookie'.
+
+        Cookies are never implicitly removed from the headers.
+
+        BEWARE: httpclient cannot handle cookies
+        scattered over multiple lines, which is valid
+        in HTTP headers.
+        """
+        server_cookies = response.getheader('set-cookie')
+        if server_cookies:
+            for cookie in map(lambda f: f.split('; '), server_cookies.split(', ')):
+                name = cookie[0].split('=')[0]
+                self.cookies[name] = cookie
+        #print "Stored cookies: %s" % (self.cookies)
+
+    def add_cookies(self,cookies):
+        """ Add cookies from array.
+        """
+        self.cookies.update(cookies)
+
+    def cookie_headers(self):
+        """ Parse cookies to HTTP header string. 
+        """
+        #print "%i cookies" % (len(self.cookies))
+        return '; '.join(map(
+            lambda f: f[0], self.cookies.values()))
 
     def get(self,url,referer=None):
         """ Execute GET request.
         Returns httplib.HTTPResponse.
         """
         method = httpclient.GetMethod(url)
-        for cookie in self.cookies:
-            method.add_request_header('Cookie',cookie)
-
+        # add cookies
+        method.add_request_header('Cookie',self.cookie_headers())
+        #print method.getheaders()
         method.execute()
         response = method.get_response()
-
-        _c = response.getheader('set-cookie')
-        if _c:
-            self.cookies = [ _c ] # not quite correct
-        else:
-            self.cookies = []
+        #print response.getheaders()
+        self.update_cookies(response) # updates state
         return response
+
+    def post(self,url,params={}):
+        """ Execute POST request.
+        Returns httplib.HTTPResponse.
+        """
+        method = httpclient.PostMethod(url)
+        # add parameters to request
+        body = ''
+        for (k,v) in params.items():
+            body += "%s=%s&" % (k,v)
+        method.set_body(body)
+
+        # add cookies
+        method.add_request_header('Cookie',self.cookie_headers())
+
+        method.set_follow_redirects(0)
+        #print method.getheaders()
+        method.execute()
+        response = method.get_response()
+        #print response.getheaders()
+
+        # redirect does not echo sent cookies, but may set new ones
+        self.update_cookies(response) # updates state
+
+        if response.status == 302 or response.status == 301:
+            return self.get(response.getheader('Location'))
+        else:
+            return response
 
 
 ### TEXT PORTLET (useful to study how it works)
