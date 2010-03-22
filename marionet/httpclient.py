@@ -351,13 +351,17 @@ class HttpMethodBase:
         self.__user_agent = Configuration().get_user_agent()
         self.__proxy = Configuration().get_http_proxy()
 
+    def getheaders(self):
+        return self.__headers
+
     def add_request_header(self, name, value):
         """Adds a header to the request.
         @param name: header name.
         @param value: header value.
         """
-        if not(self.__headers.has_key(name)):
-            self.__headers[name] = value
+        # NOTE: to update cookies, the value needs to be overwritten.
+        #if not(self.__headers.has_key(name)):
+        self.__headers[name] = value
     def set_request_header(self, name, value):
         """Sets a request header.
         @param name: header name.
