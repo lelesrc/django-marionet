@@ -37,9 +37,9 @@ class WebClientTestCase(TestCase):
         """
         client = WebClient()
         self.assert_(client)
-        (status_code, response) = client.get(url=self.junit_url)
-        self.assertEqual(200, status_code)
-        self.assertEqual(0, len(response.cookies()))
+        response = client.get(url=self.junit_url)
+        self.assertEqual(200, response.status)
+        self.assertEqual(0, len(client.cookies))
 
 class MarionetTestCase(TestCase):
 

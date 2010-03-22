@@ -13,6 +13,8 @@ from portlets.models import Portlet
 from portlets.utils import register_portlet
 
 from marionet import log, Config
+import httpclient
+
 
 class PortletFilter():
     """ This is still a mess. """
@@ -126,7 +128,7 @@ class WebClient():
     Handles state maintenance, in that after each request
     cookies are updated.
     """
-    cookies = None
+    cookies = []
     locale  = None
 
     def __init__(self,*args,**kwargs):
@@ -136,11 +138,17 @@ class WebClient():
         if 'locale' in kwargs:
             self.locale = kwargs['locale']
 
+        #self.__config = httpclient.Configuration()
+        #config.set_trust_store("/path/to/verisign/ca.pem")
+
     def get(self,url,referer=None):
         """ Execute GET request.
-        Returns a tuple of (status_code, response).
+        Returns httplib.HTTPResponse.
         """
-        return (500, None)
+        method = httpclient.GetMethod(url)
+        method.execute()
+        response = method.get_response()
+        return response
 
 
 ### TEXT PORTLET (useful to study how it works)
