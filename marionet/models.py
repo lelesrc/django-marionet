@@ -146,8 +146,17 @@ class WebClient():
         Returns httplib.HTTPResponse.
         """
         method = httpclient.GetMethod(url)
+        for cookie in self.cookies:
+            method.add_request_header('Cookie',cookie)
+
         method.execute()
         response = method.get_response()
+
+        _c = response.getheader('set-cookie')
+        if _c:
+            self.cookies = [ _c ] # not quite correct
+        else:
+            self.cookies = []
         return response
 
 
