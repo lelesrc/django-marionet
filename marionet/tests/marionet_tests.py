@@ -170,14 +170,18 @@ class WebClientTestCase(TestCase):
         client_1 = WebClient()
         self.assert_(client_1)
         self.assertEqual(0, len(client_1.cookies))
-        cookies = ['foo=bar', 'baz=xyz']
+        cookies = {'foo': ['foo=bar'], 'baz': ['baz=xyz']}
         client_1.cookies = copy(cookies)
         self.assertEqual(2, len(client_1.cookies))
 
         client_2 = WebClient()
         self.assert_(client_2)
         self.assertEqual(0, len(client_2.cookies))
-        cookies = ['foo=bar', 'baz=xyz', 'abc=def']
+        cookies = {
+            'foo': ['foo=abc'],
+            'bar': ['bar=def'],
+            'baz': ['baz=ghi'],
+            }
         client_2.cookies = copy(cookies)
         self.assertEqual(3, len(client_2.cookies))
         self.assertEqual(2, len(client_1.cookies))

@@ -148,7 +148,7 @@ class WebClient():
         scattered over multiple lines, which is valid
         in HTTP headers.
         """
-        server_cookies = response.getheader('set-cookie')
+        server_cookies = response.getheader('Set-Cookie')
         if server_cookies:
             for cookie in map(lambda f: f.split('; '), server_cookies.split(', ')):
                 name = cookie[0].split('=')[0]
@@ -156,7 +156,8 @@ class WebClient():
         #print "Stored cookies: %s" % (self.cookies)
 
     def add_cookies(self,cookies):
-        """ Add cookies from array.
+        """ Add cookies from dict.
+        Format: {'foo': ['foo=bar'], 'baz': ['baz=xyz']}
         """
         self.cookies.update(cookies)
 
@@ -164,8 +165,7 @@ class WebClient():
         """ Parse cookies to HTTP header string. 
         """
         #print "%i cookies" % (len(self.cookies))
-        return '; '.join(map(
-            lambda f: f[0], self.cookies.values()))
+        return '; '.join(map(lambda f: f[0], self.cookies.values()))
 
     def get(self,url,referer=None):
         """ Execute GET request.
@@ -187,22 +187,19 @@ class WebClient():
         """
         method = httpclient.PostMethod(url)
         # add parameters to request body
-        body = '&'.join(map(
-            lambda (k,v): k+"="+v, params.items()))
+        body = '&'.join(map(lambda (k,v): k+"="+v, params.items()))
         method.set_body(body)
-
         # add cookies
         method.add_request_header('Cookie',self.cookie_headers())
-
+        # httpclient forgets cookies with automatic redirect..
         method.set_follow_redirects(0)
         #print method.getheaders()
         method.execute()
         response = method.get_response()
         #print response.getheaders()
-
-        # redirect does not echo sent cookies, but may set new ones
+        # server redirect does not echo sent cookies, but may set new ones
         self.update_cookies(response) # updates state
-
+        # follow redirect..
         if response.status == 302 or response.status == 301:
             return self.get(response.getheader('Location'))
         else:
