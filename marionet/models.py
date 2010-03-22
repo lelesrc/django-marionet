@@ -186,10 +186,9 @@ class WebClient():
         Returns httplib.HTTPResponse.
         """
         method = httpclient.PostMethod(url)
-        # add parameters to request
-        body = ''
-        for (k,v) in params.items():
-            body += "%s=%s&" % (k,v)
+        # add parameters to request body
+        body = '&'.join(map(
+            lambda (k,v): k+"="+v, params.items()))
         method.set_body(body)
 
         # add cookies
