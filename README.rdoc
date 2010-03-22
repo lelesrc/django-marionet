@@ -24,3 +24,6 @@ Navigate to http://localhost:8000/demo
 == Testing
 Use <tt>make test</tt> to run the tests.
 
+Please note that the 'portlet test bench' from Caterpillar project needs to be running while running these tests.
+Get the 'example' Rails app from here[http://github.com/lamikae/rails-portlet]
+or roll your own by following instructions here[http://github.com/lamikae/caterpillar].

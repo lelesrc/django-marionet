@@ -24,6 +24,12 @@ log.setlevel(TEST_LOG_LEVEL)
 import inspect
 
 class WebClientTestCase(TestCase):
+    """ Please note that the 'portlet test bench' from Caterpillar project
+    needs to be running while running these tests.
+
+    Get the 'example' Rails app from http://github.com/lamikae/rails-portlet
+    or roll your own by following instructions at http://github.com/lamikae/caterpillar
+    """
     def setUp(self):
         self.junit_url = 'http://localhost:3000/caterpillar/test_bench/junit'
 
