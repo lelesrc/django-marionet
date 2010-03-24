@@ -206,9 +206,9 @@ class WebClient():
             return response
 
 
-class XSLTransformer():
-    """ Singleton.
-    Loads XSLT sheets.
+class XSLTransformation():
+    """ Functions for XSL transformation.
+    Singleton.
     """
     sheets = None
 
@@ -219,21 +219,18 @@ class XSLTransformer():
 
     def __body_xslt(self):
         """ TODO
+        Loads XSLT sheets.
         """
         log.debug('load xslt from file')
         return "<>"
 
-
-class XSLTfuncs():
-    """ Functions for XSL transformation.
-    """
     @staticmethod
     def transform(doc,sheet='body'):
         """ Performs XSL transformation to doc using sheet.
         """
         log.debug('transform body of doc')
         
-        xslt = XSLTransformer().sheets[sheet]
+        xslt = XSLTransformation().sheets[sheet]
         log.debug(xslt)
         return doc
 

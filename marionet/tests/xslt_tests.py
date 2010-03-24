@@ -4,7 +4,7 @@
 from django.test import TestCase
 
 from marionet import log
-from marionet.models import WebClient, XSLTfuncs
+from marionet.models import WebClient, XSLTransformation
 from marionet.tests.utils import RequestFactory
 from test.settings import TEST_LOG_LEVEL
 log.setlevel(TEST_LOG_LEVEL)
@@ -26,5 +26,5 @@ class XSLTransformationTestCase(TestCase):
         self.assertEqual(200, response.status)
         body = response.read()
         print body
-        XSLTfuncs.transform(body,'body')
+        XSLTransformation.transform(body,'body')
 
