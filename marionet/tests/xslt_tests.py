@@ -4,17 +4,27 @@
 from django.test import TestCase
 
 from marionet import log
-from marionet.models import Marionet, PortletFilter
-from marionet.models import WebClient
+from marionet.models import WebClient, XSLTfuncs
 from marionet.tests.utils import RequestFactory
 from test.settings import TEST_LOG_LEVEL
 log.setlevel(TEST_LOG_LEVEL)
 
-import inspect
-import libxml2
-from copy import copy
+#import inspect
+#import libxml2
+#from copy import copy
 
-class XSLTransformerTestCase(TestCase):
+class XSLTransformationTestCase(TestCase):
     def setUp(self):
-        pass
+        self.junit_url = 'http://localhost:3000/caterpillar/test_bench/junit'
+
+    def test_simple(self):
+        """ Simple GET.
+        """
+        client = WebClient()
+        self.assert_(client)
+        response = client.get(self.junit_url+'/xslt_simple')
+        self.assertEqual(200, response.status)
+        body = response.read()
+        print body
+        XSLTfuncs.transform_body(body)
 
