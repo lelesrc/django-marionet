@@ -109,10 +109,15 @@ class Marionet(Portlet):
         log.debug(" -- RENDER -- ")
         #log.debug(self)
         log.debug(context)
-        #request = context.get("request")
-        #url = #get from context
-        #log.debug("View "+url)
-        return context.__str__
+        
+        # HACK
+        url = 'http://localhost:3000/caterpillar/test_bench'
+        client = WebClient()
+        response = client.get(url)
+        html = response.read()
+        out = XSLTransformation.transform(html,'body')
+        #log.debug(out)
+        return out
 
     def form(self, **kwargs):
         """
