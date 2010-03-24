@@ -14,6 +14,7 @@ from portlets.utils import register_portlet
 
 from marionet import log, Config
 import httpclient
+from singletonmixin import Singleton
 
 
 class PortletFilter():
@@ -206,7 +207,7 @@ class WebClient():
             return response
 
 
-class XSLTransformation():
+class XSLTransformation(Singleton):
     """ Functions for XSL transformation.
     Singleton.
     """
@@ -230,7 +231,7 @@ class XSLTransformation():
         """
         log.debug('transform body of doc')
         
-        xslt = XSLTransformation().sheets[sheet]
+        xslt = XSLTransformation.getInstance().sheets[sheet]
         log.debug(xslt)
         return doc
 
