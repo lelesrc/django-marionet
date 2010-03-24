@@ -235,13 +235,11 @@ class XSLTransformation(Singleton):
 
     @staticmethod
     def transform(html,sheet='body'):
-        """ Performs XSL transformation to doc using sheet.
+        """ Performs XSL transformation to html using sheet.
         """
-        log.debug('use xslt sheet '+sheet)
-        __transform = etree.XSLT(
-            XSLTransformation.getInstance().sheets[sheet]
-            )
-        return __transform(
+        log.debug(sheet+' xslt')
+        xslt_tree = XSLTransformation.getInstance().sheets[sheet]
+        return etree.XSLT(xslt_tree)(
             etree.parse(
                 StringIO(
                     html
