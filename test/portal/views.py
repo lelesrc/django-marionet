@@ -30,16 +30,10 @@ from portlets.models import PortletBlocking
 from portlets.models import PortletRegistration
 from portlets.models import Slot
 
-from marionet.models import Marionet, TextPortlet
+from marionet.models import Marionet
 
 def index(request):
     return HttpResponse("hello world")
-
-def text_portlet(request):
-    portlet = TextPortlet.objects.create(title="Portlet title",text="Content")
-    return render_to_response("site.html", RequestContext(request, {
-        "portlet" : portlet,
-    }))
 
 def marionet(request):
     portlet = Marionet.objects.create(title="....",url="",req_method="")
