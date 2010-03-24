@@ -16,6 +16,7 @@ from marionet import log, Config
 import httpclient
 from singletonmixin import Singleton
 from lxml import etree
+import lxml.html.soupparser
 from StringIO import StringIO
 
 
@@ -224,26 +225,42 @@ class XSLTransformation(Singleton):
         Loads XSLT sheets.
         """
         log.debug('define xslt')
-        return etree.parse(StringIO('''\
+        return etree.XML('''\
 <xsl:stylesheet version="1.0"
      xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
      <xsl:output method="html"/>
+
+     <xsl:param name="namespace" required="yes"/>
+
      <xsl:template match="html">
+         <div id="{$namespace}_body">
          <xsl:value-of select="body"/>
+         </div>
      </xsl:template>
-</xsl:stylesheet>'''))
+</xsl:stylesheet>''')
+
+    """
+    """
 
     @staticmethod
     def transform(html,sheet='body'):
         """ Performs XSL transformation to html using sheet.
+        In case the input is badly formatted html, the soupparser is used.
         """
         log.debug(sheet+' xslt')
         xslt_tree = XSLTransformation.getInstance().sheets[sheet]
-        return etree.XSLT(xslt_tree)(
-            etree.parse(
+        try:
+            root = etree.parse(
                 StringIO(
                     html
-                    )))
+                    ))
+        except lxml.etree.XMLSyntaxError:
+            log.warn("badly structured HTML")
+            root = lxml.html.soupparser.fromstring(html)
+        return etree.XSLT(xslt_tree)(
+            root, namespace="'__namespace__'"
+            )
+
 
 
 ### TEXT PORTLET (useful to study how it works)
