@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#
+# In the works.
 
 # django imports
 from django import forms
@@ -91,13 +91,13 @@ class Marionet(Portlet):
 
     def __config__(self):
         """ Portlet should handle conf from text file """
-        print "config"
+        log.debug("__config__")
         return {'url': 'http://0.0.0.0:8000/test'}
 
     def my_render_filter(self,*args,**kwargs):
         """ Loaded apparently only once at startup. """
         log.debug(" -- PREFILTER -- ") # the message never appers
-        print "ehm" # well but this does, at startup
+        #print "ehm" # well but this does, at startup
         #kwargs['config'] = {'hm':0} # need to think of passing config
         
         return PortletFilter.render_filter(self,*args,**kwargs)
@@ -132,6 +132,7 @@ class MarionetForm(forms.ModelForm):
 
 register_portlet(Marionet, "Marionet")
 
+
 class WebClient():
     """ Modeled after OnlineClient in html2jsr286.
     Handles state maintenance, in that after each request
@@ -162,7 +163,7 @@ class WebClient():
             for cookie in map(lambda f: f.split('; '), server_cookies.split(', ')):
                 name = cookie[0].split('=')[0]
                 self.cookies[name] = cookie
-        #print "Stored cookies: %s" % (self.cookies)
+        log.debug("Stored %i cookies: %s" % (len(self.cookies),self.cookies))
 
     def add_cookies(self,cookies):
         """ Add cookies from dict.
@@ -173,7 +174,6 @@ class WebClient():
     def cookie_headers(self):
         """ Parse cookies to HTTP header string. 
         """
-        #print "%i cookies" % (len(self.cookies))
         return '; '.join(map(lambda f: f[0], self.cookies.values()))
 
     def get(self,url,referer=None):
@@ -183,10 +183,10 @@ class WebClient():
         method = httpclient.GetMethod(url)
         # add cookies
         method.add_request_header('Cookie',self.cookie_headers())
-        #print method.getheaders()
+        #log.debug(method.getheaders())
         method.execute()
         response = method.get_response()
-        #print response.getheaders()
+        #log.debug(response.getheaders())
         self.update_cookies(response) # updates state
         return response
 
@@ -202,10 +202,10 @@ class WebClient():
         method.add_request_header('Cookie',self.cookie_headers())
         # httpclient forgets cookies with automatic redirect..
         method.set_follow_redirects(0)
-        #print method.getheaders()
+        #log.debug(method.getheaders())
         method.execute()
         response = method.get_response()
-        #print response.getheaders()
+        #log.debug(response.getheaders())
         # server redirect does not echo sent cookies, but may set new ones
         self.update_cookies(response) # updates state
         # follow redirect..
@@ -221,15 +221,14 @@ class XSLTransformation(Singleton):
     sheets = None
 
     def __init__(self,*args,**kwargs):
-        """ Define xslts. 
+        """ Define available xslt sheets. 
         """
         self.sheets = {'body': self.__body_xslt()}
 
     def __body_xslt(self):
-        """ TODO
-        Loads XSLT sheets.
+        """ Define body transformation stylesheet.
         """
-        log.debug('define xslt')
+        log.debug('define xslt - this message should only appear at startup')
         return etree.XML('''\
 <xsl:stylesheet version="1.0"
      xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
@@ -251,8 +250,6 @@ class XSLTransformation(Singleton):
     </xsl:template>
 </xsl:stylesheet>''')
 
-    """
-    """
 
     @staticmethod
     def transform(html,sheet='body'):
@@ -267,43 +264,9 @@ class XSLTransformation(Singleton):
                     html
                     ))
         except lxml.etree.XMLSyntaxError:
-            log.warn("badly structured HTML")
+            log.warn("badly structured HTML - using slower fallback parser")
             root = lxml.html.soupparser.fromstring(html)
         return etree.XSLT(xslt_tree)(
             root, namespace="'__namespace__'"
             )
 
-
-
-### TEXT PORTLET (useful to study how it works)
-
-class TextPortlet(Portlet):
-    """A simple portlet to display some text.
-    TextPortlet copied from django-portlets (BSD license)
-    author: diefenbach
-    """
-    text = models.TextField(_(u"Text"), blank=True)
-
-    def __unicode__(self):
-        return "%s" % self.id
-
-    def render(self, context=None):
-        """Renders the portlet as html.
-        """
-        return render_to_string("portlets/text_portlet.html", {
-            "title" : self.title,
-            "text" : self.text
-        })
-
-    def form(self, **kwargs):
-        """
-        """
-        return TextPortletForm(instance=self, **kwargs)
-
-class TextPortletForm(forms.ModelForm):
-    """Form for the TextPortlet.
-    """
-    class Meta:
-        model = TextPortlet
-
-register_portlet(TextPortlet, "TextPortlet")

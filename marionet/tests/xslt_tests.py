@@ -24,7 +24,8 @@ class XSLTransformationTestCase(TestCase):
         self.assert_(client)
         response = client.get(self.junit_url+'/xslt_simple')
         self.assertEqual(200, response.status)
-        body = response.read()
-        print body
-        out = XSLTransformation.transform(body,'body')
-        print out
+        html = response.read()
+        #print body
+        out = XSLTransformation.transform(html,'body')
+        #print out
+
