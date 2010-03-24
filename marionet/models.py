@@ -15,6 +15,8 @@ from portlets.utils import register_portlet
 from marionet import log, Config
 import httpclient
 from singletonmixin import Singleton
+from lxml import etree
+from StringIO import StringIO
 
 
 class PortletFilter():
@@ -209,7 +211,6 @@ class WebClient():
 
 class XSLTransformation(Singleton):
     """ Functions for XSL transformation.
-    Singleton.
     """
     sheets = None
 
@@ -222,18 +223,29 @@ class XSLTransformation(Singleton):
         """ TODO
         Loads XSLT sheets.
         """
-        log.debug('load xslt from file')
-        return "<>"
+        log.debug('define xslt')
+        return etree.parse(StringIO('''\
+<xsl:stylesheet version="1.0"
+     xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+     <xsl:output method="html"/>
+     <xsl:template match="html">
+         <xsl:value-of select="body"/>
+     </xsl:template>
+</xsl:stylesheet>'''))
 
     @staticmethod
-    def transform(doc,sheet='body'):
+    def transform(html,sheet='body'):
         """ Performs XSL transformation to doc using sheet.
         """
-        log.debug('transform body of doc')
-        
-        xslt = XSLTransformation.getInstance().sheets[sheet]
-        log.debug(xslt)
-        return doc
+        log.debug('use xslt sheet '+sheet)
+        __transform = etree.XSLT(
+            XSLTransformation.getInstance().sheets[sheet]
+            )
+        return __transform(
+            etree.parse(
+                StringIO(
+                    html
+                    )))
 
 
 ### TEXT PORTLET (useful to study how it works)
