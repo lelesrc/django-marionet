@@ -36,8 +36,11 @@ def index(request):
     return HttpResponse("hello world")
 
 def marionet(request):
-    portlet = Marionet.objects.create(title="....",url="",req_method="")
+    portlet_1 = Marionet.objects.create(title="....",url="",req_method="")
+    portlet_2 = Marionet.objects.create(title="....",url="",req_method="")
+    portlet_1.title="portlet 1"
+    portlet_2.title="portlet 2"
+    portlets = [portlet_1, portlet_2]
     return render_to_response("test_bench.html", {
-        "title" : portlet.title,
-        "content" : portlet.render()
-    })
+        "portlets" : portlets,
+        })

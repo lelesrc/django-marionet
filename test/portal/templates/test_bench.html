@@ -1,12 +1,9 @@
 {% extends "base.html" %}
 
-{% block marionet %}
-    <div class="portlet">
-        <div class="title">
-             {{ title }}
-        </div>
-        <div class="content">
-             {{ content|safe }}
-        </div>
-    </div>
+{% block marionet_portlets %}
+    {% for portlet in portlets %}
+        {% block marionet %}
+            {% include "marionet/portlet.html" %}
+        {% endblock %}
+    {% endfor %}
 {% endblock %}

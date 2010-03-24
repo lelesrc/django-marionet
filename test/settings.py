@@ -10,6 +10,7 @@ unit tests in two places:
       directory that holds ``models.py``. Again, the test runner looks for any
       subclass of ``unittest.TestCase`` in this module.
 """
+import os
 
 DEBUG = True
 TEST_LOG_LEVEL = 'critical'
@@ -32,6 +33,9 @@ INSTALLED_APPS = (
     'marionet',
 )
 ROOT_URLCONF = 'test.portal.urls'
-TEMPLATE_DIRS = ('test/portal/templates')
+TEMPLATE_DIRS = (
+    os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'marionet', 'templates'),
+    os.path.join(os.path.abspath(os.path.dirname(__file__)), 'portal', 'templates'),
+    )
 SITE_ID = 1
 

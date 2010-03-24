@@ -1,0 +1,10 @@
+{% block marionet %}
+    <div class="portlet">
+        <div class="title">
+             {{ portlet.title }}
+        </div>
+        <div class="content">
+             {{ portlet.render|safe }}
+        </div>
+    </div>
+{% endblock %}
