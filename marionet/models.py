@@ -205,6 +205,7 @@ class WebClient():
         else:
             return response
 
+
 class XSLTransformer():
     """ Singleton.
     Loads XSLT sheets.
@@ -222,25 +223,19 @@ class XSLTransformer():
         log.debug('load xslt from file')
         return "<>"
 
-    @classmethod
-    def body(self,doc):
-        """ Performs <body> transformation to doc.
-        """
-        log.debug('body XSLT')
-        xslt = XSLTransformer().sheets['body']
-        log.debug(xslt)
-        return doc
-
 
 class XSLTfuncs():
     """ Functions for XSL transformation.
     """
     @staticmethod
-    def transform_body(doc):
-        """ Calls the singleton method 'body'.
+    def transform(doc,sheet='body'):
+        """ Performs XSL transformation to doc using sheet.
         """
         log.debug('transform body of doc')
-        return XSLTransformer.body(doc)
+        
+        xslt = XSLTransformer().sheets[sheet]
+        log.debug(xslt)
+        return doc
 
 
 ### TEXT PORTLET (useful to study how it works)

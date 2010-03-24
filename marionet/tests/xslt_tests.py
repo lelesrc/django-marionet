@@ -26,5 +26,5 @@ class XSLTransformationTestCase(TestCase):
         self.assertEqual(200, response.status)
         body = response.read()
         print body
-        XSLTfuncs.transform_body(body)
+        XSLTfuncs.transform(body,'body')
 
