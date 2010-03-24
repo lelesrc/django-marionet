@@ -234,9 +234,16 @@ class XSLTransformation(Singleton):
 
      <xsl:template match="html">
          <div id="{$namespace}_body">
-         <xsl:value-of select="body"/>
+            <xsl:apply-templates select="body"/>
          </div>
      </xsl:template>
+
+    <!-- Copy through everything that hasn't been modified by the processor -->
+    <xsl:template match="text()|@*|*">
+        <xsl:copy>
+          <xsl:apply-templates select="*|@*|text()"/>
+        </xsl:copy>
+    </xsl:template>
 </xsl:stylesheet>''')
 
     """
