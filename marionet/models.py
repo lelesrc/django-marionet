@@ -13,6 +13,9 @@ from portlets.models import Portlet
 from portlets.utils import register_portlet
 
 from marionet import log, Config
+from test.settings import DEBUG
+log.setlevel('debug' if DEBUG else 'info')
+
 import httpclient
 from singletonmixin import Singleton
 from lxml import etree
@@ -109,7 +112,7 @@ class Marionet(Portlet):
         # HACK to circumvent render filter
         url = 'http://localhost:3000/caterpillar/test_bench'
 
-        log.debug("render "+url)
+        log.info("render "+url)
         log.debug(context)
         client = WebClient()
         response = client.get(url)
@@ -295,5 +298,6 @@ class PageProcessor(Singleton):
             (meta['content_type'],meta['charset']) = '; '.split(
                 _content[0].attrib['content'])
         """
+        log.debug('meta: %s' % (meta))
         return (PageProcessor.transform(tree,*args,**kwargs),meta)
 
