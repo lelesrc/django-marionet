@@ -68,7 +68,9 @@ class PageProcessorTestCase(TestCase):
         html = '''
 <html>
   <head>
-    <title>Portlet title</title>
+    <title>
+      Portlet title
+    </title>
     <meta http-equiv="content-type" content="text/html; charset=UTF-8"></meta>
   </head>
 </html>

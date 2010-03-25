@@ -16,6 +16,7 @@ from marionet import log, Config
 from test.settings import DEBUG
 log.setlevel('debug' if DEBUG else 'info')
 
+import re
 import httpclient
 from singletonmixin import Singleton
 from lxml import etree
@@ -117,6 +118,14 @@ class Marionet(Portlet):
         client = WebClient()
         response = client.get(url)
         (out,meta) = PageProcessor.process(response,sheet='body')
+        self.title = meta['title'] # OOPS!
+        """
+        This method has side effects; the self.title is set only
+        after render() is called, but currently the portlet title
+        is inserted to the page before rendering, thus the title
+        is empty...
+        """
+        #log.debug('title: '+self.title)
         #log.debug(out)
         return out
 
@@ -290,7 +299,10 @@ class PageProcessor(Singleton):
             #'content_type': None,
             #'charset': None,
             }
-        meta['title'] = tree.findtext('head/title')
+        # strip leading and trailing non-word chars
+        meta['title'] = re.sub(
+            r'^\W+|\W+$','',
+            tree.findtext('head/title'))
         # get content_type and charset
         """ Not used so commented out.
         _content = tree.findall('head/meta[@content]')
