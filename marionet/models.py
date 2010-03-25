@@ -106,16 +106,14 @@ class Marionet(Portlet):
     def render(self, context=None):
         """
         """
-        log.debug(" -- RENDER -- ")
-        #log.debug(self)
-        log.debug(context)
-        
-        # HACK
+        # HACK to circumvent render filter
         url = 'http://localhost:3000/caterpillar/test_bench'
+
+        log.debug("render "+url)
+        log.debug(context)
         client = WebClient()
         response = client.get(url)
-        html = response.read()
-        out = XSLTransformation.transform(html,'body')
+        (out,meta) = PageProcessor.process(response,sheet='body')
         #log.debug(out)
         return out
 
@@ -215,10 +213,9 @@ class WebClient():
             return response
 
 
-class XSLTransformation(Singleton):
-    """ Functions for XSL transformation.
+class PageProcessor(Singleton):
+    """ Functions for page transformation and metadata parsing.
     """
-    sheets = None
 
     def __init__(self,*args,**kwargs):
         """ Define available xslt sheets. 
@@ -252,12 +249,11 @@ class XSLTransformation(Singleton):
 
 
     @staticmethod
-    def transform(html,sheet='body'):
-        """ Performs XSL transformation to html using sheet.
+    def parse_tree(response):
+        """
         In case the input is badly formatted html, the soupparser is used.
         """
-        log.debug(sheet+' xslt')
-        xslt_tree = XSLTransformation.getInstance().sheets[sheet]
+        html = response.read()
         try:
             root = etree.parse(
                 StringIO(
@@ -266,7 +262,38 @@ class XSLTransformation(Singleton):
         except lxml.etree.XMLSyntaxError:
             log.warn("badly structured HTML - using slower fallback parser")
             root = lxml.html.soupparser.fromstring(html)
+        return root
+
+    @staticmethod
+    def transform(html_tree,sheet='body'):
+        """ Performs XSL transformation to HTML tree using sheet.
+        """
+        log.debug(sheet+' xslt')
+        xslt_tree = PageProcessor.getInstance().sheets[sheet]
         return etree.XSLT(xslt_tree)(
-            root, namespace="'__namespace__'"
+            html_tree,
+            namespace="'__namespace__'"
             )
+
+    @staticmethod
+    def process(response,*args,**kwargs):
+        """ Serializes the response body to a node tree,
+        extracts metadata and transforms the portlet body.
+        Returns a tuple of (body,metadata).
+        """
+        tree = PageProcessor.parse_tree(response)
+        meta = {
+            'title': "",
+            #'content_type': None,
+            #'charset': None,
+            }
+        meta['title'] = tree.findtext('head/title')
+        # get content_type and charset
+        """ Not used so commented out.
+        _content = tree.findall('head/meta[@content]')
+        if _content:
+            (meta['content_type'],meta['charset']) = '; '.split(
+                _content[0].attrib['content'])
+        """
+        return (PageProcessor.transform(tree,*args,**kwargs),meta)
 
