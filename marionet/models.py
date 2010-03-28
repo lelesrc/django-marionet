@@ -13,8 +13,6 @@ from portlets.models import Portlet
 from portlets.utils import register_portlet
 
 from marionet import log, Config
-from test.settings import DEBUG
-log.setlevel('debug' if DEBUG else 'info')
 
 import re
 import httpclient

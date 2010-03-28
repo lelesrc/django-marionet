@@ -13,6 +13,9 @@ unit tests in two places:
 import os
 
 DEBUG = True
+from marionet import log
+log.setlevel('debug' if DEBUG else 'info')
+
 TEST_LOG_LEVEL = 'critical'
 DATABASES = {
     'default': {
