@@ -1,9 +1,33 @@
 {% block marionet %}
-    <div class="portlet">
-        <div class="title">
+    <style type="text/css">
+    .marionet {
+    width: 400px;
+    min-height: 300px;
+    height: auto;
+    border: 4px double red;
+    float: left;
+    margin: 0 20px 0 0;
+    }
+    .marionet_title {
+    width: inherit;
+    height: 20px;
+    margin: 1px;
+    width: auto;
+    border: 2px solid green;
+    }
+    .marionet_content {
+    width: inherit;
+    height: auto;
+    width: auto;
+    border: 2px solid blue;
+    }
+    </style>
+
+    <div class="marionet">
+        <div class="marionet_title">
              {{ portlet.title }}
         </div>
-        <div class="content">
+        <div class="marionet_content">
              {{ portlet.render|safe }}
         </div>
     </div>
