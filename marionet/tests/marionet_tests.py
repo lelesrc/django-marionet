@@ -40,6 +40,14 @@ class MarionetTestCase(TestCase):
         out = mn_portlet.render() # calls filter + changes state!
         self.assertNotEqual(None,out)
 
+    def test_title(self):
+        p = Marionet(title='reboot')
+        self.assertEqual('reboot',p.title)
+
+    def test_url(self):
+        p = Marionet(url='http://localhost/')
+        self.assertEqual('http://localhost/',p.url)
+
     def test_secret(self):
         """
         """

@@ -85,11 +85,12 @@ class Marionet(Portlet):
         return "%s" % self.url
 
     def __init__(self, *args, **kwargs):
-        Portlet.__init__(self)
-        log.info("Marionet '%s' version %s" % ('',self.VERSION))
-
         if 'session_secret' in kwargs:
             self.session_secret = kwargs['session_secret']
+            del kwargs['session_secret']
+        Portlet.__init__(self, *args, **kwargs)
+        log.info("Marionet '%s' version %s" % (self.title,self.VERSION))
+
 
     def __config__(self):
         """ Portlet should handle conf from text file """
