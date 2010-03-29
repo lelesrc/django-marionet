@@ -35,21 +35,15 @@ class PortletFilter():
 
         Returns a function.
         """
-        #config = kwargs['config']
-        #log.debug('config: %s' % (config))
         def _filter(ctx, *args, **kwargs):
-            log.debug("render_filter activated")
+            log.debug("---------------------------------------------------")
             if not 'config' is kwargs:
-                config = {'pi':3.14159}
-                #log.info("no config")
+                config = {'pi':3.1415926535897932384626}
             else:
                 config = kwargs['config']
-                log.debug(config)
 
-            request = None
-            # hardwire config to context
-            #log.debug(ctx)
-            # oops!
+            log.debug("context: %s\nconfig: %s" % (ctx,config))
+
             #ctx = RequestContext(request, config)
             #log.debug(ctx)
             return view_func(ctx,config,*args,**kwargs)
@@ -107,10 +101,9 @@ class Marionet(Portlet):
     def render(self, context=None):
         """
         """
-        log.debug("---------------------------------------------------")
+        log.debug("VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV")
         log.info("render "+self.url)
         log.debug(context)
-        log.debug("---------------------------------------------------")
         try:
             client = WebClient()
             response = client.get(self.url)

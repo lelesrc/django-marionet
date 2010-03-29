@@ -14,7 +14,7 @@ register = template.Library()
 def marionet(context,portlet):
     """
     """
-    log.debug(context)
+    log.debug("rendering context: %s" % (context))
     return {
         'portlet': context['portlet']
     }
