@@ -62,7 +62,7 @@ class PageProcessorTestCase(TestCase):
         self.assert_(out)
         self.assert_(meta)
 
-    def test_meta(self):
+    def test_title_ok(self):
         """ Response metadata.
         """
         html = '''
@@ -81,4 +81,22 @@ class PageProcessorTestCase(TestCase):
         self.assert_(out)
         self.assert_(meta)
         self.assertEqual('Portlet title',meta['title'])
+
+    def test_title_bad(self):
+        """ Response metadata.
+        """
+        html = '''
+<html>
+  <head>
+  </head>
+</html>
+            '''
+        response = ResponseMock(body=html)
+        self.assert_(response)
+        (out,meta) = PageProcessor.process(response)
+        self.assert_(out)
+        self.assert_(meta)
+        self.assertEqual('',meta['title'])
+
+
 

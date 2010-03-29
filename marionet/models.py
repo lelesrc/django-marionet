@@ -41,7 +41,7 @@ class PortletFilter():
             log.debug("render_filter activated")
             if not 'config' is kwargs:
                 config = {'pi':3.14159}
-                log.info("no config")
+                #log.info("no config")
             else:
                 config = kwargs['config']
                 log.debug(config)
@@ -91,7 +91,6 @@ class Marionet(Portlet):
         Portlet.__init__(self, *args, **kwargs)
         log.info("Marionet '%s' version %s" % (self.title,self.VERSION))
 
-
     def __config__(self):
         """ Portlet should handle conf from text file """
         log.debug("__config__")
@@ -99,8 +98,7 @@ class Marionet(Portlet):
 
     def my_render_filter(self,*args,**kwargs):
         """ Loaded apparently only once at startup. """
-        log.debug(" -- PREFILTER -- ") # the message never appers
-        #print "ehm" # well but this does, at startup
+        #log.debug(" -- PREFILTER -- ")
         #kwargs['config'] = {'hm':0} # need to think of passing config
         
         return PortletFilter.render_filter(self,*args,**kwargs)
@@ -109,24 +107,30 @@ class Marionet(Portlet):
     def render(self, context=None):
         """
         """
-        # HACK to circumvent render filter
-        url = 'http://localhost:3000/caterpillar/test_bench'
-
-        log.info("render "+url)
+        log.debug("---------------------------------------------------")
+        log.info("render "+self.url)
         log.debug(context)
-        client = WebClient()
-        response = client.get(url)
-        (out,meta) = PageProcessor.process(response,sheet='body')
-        self.title = meta['title'] # OOPS!
-        """
-        This method has side effects; the self.title is set only
-        after render() is called, but currently the portlet title
-        is inserted to the page before rendering, thus the title
-        is empty...
-        """
-        #log.debug('title: '+self.title)
-        #log.debug(out)
-        return out
+        log.debug("---------------------------------------------------")
+        try:
+            client = WebClient()
+            response = client.get(self.url)
+            (out,meta) = PageProcessor.process(response,sheet='body')
+            log.debug('process passed')
+            #log.debug(out)
+            self.title = meta['title'] # OOPS!
+            #log.debug('title: '+self.title)
+            """
+            This method has side effects; the self.title is set only
+            after render() is called, but currently the portlet title
+            is inserted to the page before rendering, thus the title
+            is empty...
+            """
+            return out
+        except:
+            log.error('processing failed')
+            import traceback
+            log.error(traceback.format_exc())
+            return "ERROR"
 
     def form(self, **kwargs):
         """
@@ -155,7 +159,9 @@ class WebClient():
         else:
             self.cookies = {}
 
-        #self.__config = httpclient.Configuration()
+        self.__config = httpclient.Configuration()
+        self.__config.set_user_agent(
+            '# Mozilla/5.0 (X11; U; Linux x86_64; en-US; rv:1.9.2) Gecko/20100130 Gentoo Firefox/3.6')
         #config.set_trust_store("/path/to/verisign/ca.pem")
 
     def update_cookies(self,response):
@@ -278,6 +284,7 @@ class PageProcessor(Singleton):
     @staticmethod
     def transform(html_tree,sheet='body'):
         """ Performs XSL transformation to HTML tree using sheet.
+        @returns	lxml.etree._XSLTResultTree
         """
         log.debug(sheet+' xslt')
         xslt_tree = PageProcessor.getInstance().sheets[sheet]
@@ -292,16 +299,21 @@ class PageProcessor(Singleton):
         extracts metadata and transforms the portlet body.
         Returns a tuple of (body,metadata).
         """
+        log.debug('processing response')
         tree = PageProcessor.parse_tree(response)
         meta = {
             'title': "",
             #'content_type': None,
             #'charset': None,
             }
-        # strip leading and trailing non-word chars
-        meta['title'] = re.sub(
-            r'^\W+|\W+$','',
-            tree.findtext('head/title'))
+        try:
+            # get title,
+            # strip leading and trailing non-word chars
+            meta['title'] = re.sub(
+                r'^\W+|\W+$','',
+                tree.findtext('head/title'))
+        except TypeError:
+            pass
         # get content_type and charset
         """ Not used so commented out.
         _content = tree.findall('head/meta[@content]')
@@ -310,5 +322,8 @@ class PageProcessor(Singleton):
                 _content[0].attrib['content'])
         """
         log.debug('meta: %s' % (meta))
-        return (PageProcessor.transform(tree,*args,**kwargs),meta)
+        html = str(
+            PageProcessor.transform(tree,*args,**kwargs))
+        log.debug('processing complete')
+        return (html,meta)
 
