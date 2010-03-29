@@ -36,9 +36,19 @@ def index(request):
     return HttpResponse("hello world")
 
 def marionet(request):
-    portlet_1 = Marionet.objects.create(title="....",url="",req_method="")
-    portlet_2 = Marionet.objects.create(title="....",url="",req_method="")
-    portlets = [portlet_1, portlet_2]
+    portlets = [
+        Marionet.objects.create(
+            url="http://www.flickr.com",
+            req_method='GET'
+            ),
+        Marionet.objects.create(
+            url="http://www.flickr.com/",
+            req_method='GET'
+            ),
+        Marionet.objects.create(
+            url="http://localhost:3000/caterpillar/test_bench"
+            ),
+        ]
     return render_to_response("test_bench.html", {
         "portlets" : portlets,
         })
