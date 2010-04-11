@@ -4,8 +4,8 @@ Functionally it replicates a "Rails-portlet"[http://github.com/lamikae/rails-por
 Django seems a good environment to imitate this approach to idea of using many mini-applications side by side in portlets, where the apps are configured by a web url and additional parameters. Security is based on cookies and a shared secret between the remote server and the portlet HTTP client. In theory capturing XHR would work as well.
 
 == Install requirements
-Django 1.2 should be installed to the system.
-Older versions need modifications to <tt>test/settings.py</tt>.
+Python 2.6 and Django 1.2 should be installed to the system.
+Older versions of Django need modifications to <tt>test/settings.py</tt>. Python 2.5 or older do not work (currently).
 
 Unless django-portlets is in <tt>PYTHONPATH</tt>, run the command
   make portlets
