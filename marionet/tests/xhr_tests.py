@@ -52,10 +52,25 @@ document.write("Hello World!");
         self.assertEquals('Hello World!',soup.body.text)
 
     def test_jquery(self):
-        crawler = Crawler( 'http://localhost:8000/jquery' )
-        crawler.crawl()
-        QT_APP.exec_() # start the application
-        html = crawler._html
+        page = QWebPage()
+        page.mainFrame().setHtml("""
+<html>
+  <head>
+  <script type="text/javascript" src="/media/js/jquery-1.4.2.min.js"></script>
+  </head>
+  <body>
+  </body>
+  <script type="text/javascript">
+  if(jQuery) {
+      $("body").html('Hello World!');
+  }
+  </script>
+</html>
+        """, QUrl( 'http://localhost:8000' ))
+        # connect the signal to quit the application after the page is loaded
+        page.connect( page, SIGNAL( 'loadFinished(bool)' ), lambda x: QT_APP.quit() )
+        QT_APP.exec_() # start the application to load external JS
+        html = page.mainFrame().toHtml()
         soup = BeautifulSoup(html)
         self.assertEquals('Hello World!',soup.body.text)
 
