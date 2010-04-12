@@ -52,3 +52,10 @@ def marionet(request):
     return render_to_response("test_bench.html", {
         "portlets" : portlets,
         })
+
+def jquery_test(request):
+    return render_to_response("jquery_test.html", {})
+
+def ajax_generator(request):
+    portlet = Marionet()
+    return render_to_response("marionet/ajax_generator.html", {"portlet" : portlet})

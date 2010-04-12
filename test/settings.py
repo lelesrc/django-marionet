@@ -13,10 +13,21 @@ unit tests in two places:
 import os
 
 DEBUG = True
-from marionet import log
-log.setlevel('debug' if DEBUG else 'info')
+TEMPLATE_DEBUG = DEBUG
 
-TEST_LOG_LEVEL = 'critical'
+from marionet import log
+if DEBUG:
+	log.setlevel('info')
+else:
+	log.setlevel('debug')
+TEST_LOG_LEVEL = 'debug'
+#TEST_LOG_LEVEL = 'critical'
+
+PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
+MEDIA_ROOT = os.path.join(PROJECT_ROOT, 'media')
+MEDIA_URL = '/media/'
+ADMIN_MEDIA_PREFIX = '/admin-media/'
+
 DATABASES = {
     'default': {
         'ENGINE':    'django.db.backends.sqlite3',
@@ -41,4 +52,3 @@ TEMPLATE_DIRS = (
     os.path.join(os.path.abspath(os.path.dirname(__file__)), 'portal', 'templates'),
     )
 SITE_ID = 1
-

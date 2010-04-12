@@ -2,45 +2,42 @@
 #
 
 # django imports
-from django.contrib.flatpages.models import FlatPage
-from django.db import IntegrityError
-from django.template import RequestContext
 from django.test import TestCase
 
-import sys
 import signal
-import traceback
- 
-from optparse import OptionParser
-#from PySide.QtCore import *
-#from PyQt4.QtCore import SIGNAL, QUrl
+
+from PyQt4.QtCore import SIGNAL, QUrl
 from PyQt4.QtGui import QApplication
 from PyQt4.QtWebKit import *
 
-import urllib2
 from BeautifulSoup import BeautifulSoup
 
-# reviews imports
-from portlets.models import PortletAssignment
-from portlets.models import PortletBlocking
-from portlets.models import PortletRegistration
-from portlets.models import Slot
-import portlets.utils
-
 from marionet import log
-from marionet.models import Marionet, PortletFilter
-from marionet.models import WebClient
-from marionet.tests.utils import RequestFactory
 from test.settings import TEST_LOG_LEVEL
 log.setlevel(TEST_LOG_LEVEL)
+
+# the application instance - one for all tests
+QT_APP = QApplication([])
+
+class Crawler( QWebPage ):
+    def __init__(self, url):
+        QWebPage.__init__( self )
+        self._url = url
+        self._html = None
+
+    def crawl( self ):
+        signal.signal( signal.SIGINT, signal.SIG_DFL )
+        self.connect( self, SIGNAL( 'loadFinished(bool)' ), self._finished_loading )
+        self.mainFrame().load( QUrl( self._url ) )
+
+    def _finished_loading( self, result ):
+        self._html = self.mainFrame().toHtml()
+        QT_APP.quit() # quit the application, so the tests don't hang
 
 
 class XHRTestCase(TestCase):
 
-    def setUp(self):
-        self.app = QApplication([])
-
-    def test_QWebPage(self):
+    def test_javascript(self):
         page = QWebPage()
         page.mainFrame().setHtml("""
 <html><head>
@@ -54,4 +51,11 @@ document.write("Hello World!");
         soup = BeautifulSoup(html)
         self.assertEquals('Hello World!',soup.body.text)
 
+    def test_jquery(self):
+        crawler = Crawler( 'http://localhost:8000/jquery' )
+        crawler.crawl()
+        QT_APP.exec_() # start the application
+        html = crawler._html
+        soup = BeautifulSoup(html)
+        self.assertEquals('Hello World!',soup.body.text)
 
