@@ -19,37 +19,30 @@ log.setlevel(TEST_LOG_LEVEL)
 # the application instance - one for all tests
 QT_APP = QApplication([])
 
-class Crawler( QWebPage ):
-    def __init__(self, url):
-        QWebPage.__init__( self )
-        self._url = url
-        self._html = None
-
-    def crawl( self ):
-        signal.signal( signal.SIGINT, signal.SIG_DFL )
-        self.connect( self, SIGNAL( 'loadFinished(bool)' ), self._finished_loading )
-        self.mainFrame().load( QUrl( self._url ) )
-
-    def _finished_loading( self, result ):
-        self._html = self.mainFrame().toHtml()
-        QT_APP.quit() # quit the application, so the tests don't hang
-
 
 class XHRTestCase(TestCase):
+
+    def setUp(self):
+        # Ctrl-C halts the test suite
+        signal.signal( signal.SIGINT, signal.SIG_DFL )
+
 
     def test_javascript(self):
         page = QWebPage()
         page.mainFrame().setHtml("""
-<html><head>
-<script type="text/javascript">
-document.write("Hello World!");
-</script>
-</head><body>
-</body></html>
+<html>
+  <head>
+  <script type="text/javascript">
+  document.write("Hello World!");
+  </script>
+  </head>
+  <body></body>
+</html>
         """)
         html = page.mainFrame().toHtml()
         soup = BeautifulSoup(html)
         self.assertEquals('Hello World!',soup.body.text)
+
 
     def test_jquery(self):
         page = QWebPage()
@@ -58,8 +51,7 @@ document.write("Hello World!");
   <head>
   <script type="text/javascript" src="/media/js/jquery-1.4.2.min.js"></script>
   </head>
-  <body>
-  </body>
+  <body></body>
   <script type="text/javascript">
   if(jQuery) {
       $("body").html('Hello World!');
