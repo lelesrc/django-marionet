@@ -27,5 +27,5 @@ or roll your own by following instructions here[http://github.com/lamikae/caterp
 
 Install PyQt4 and BeautifulSoup for the XHR tests.
 
-Use <tt>make test</tt> to run the test suite.
-
+Use <tt>make test</tt> to set the environment and run the test suite.
+  make test
