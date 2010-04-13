@@ -1,11 +1,10 @@
 = DJANGO-MARIONET
-Marionet is a portlet that operates with a remote web app.
-Functionally it replicates a "Rails-portlet"[http://github.com/lamikae/rails-portlet] in Liferay environment.
-Django seems a good environment to imitate this approach to idea of using many mini-applications side by side in portlets, where the apps are configured by a web url and additional parameters. Security is based on cookies and a shared secret between the remote server and the portlet HTTP client. In theory capturing XHR would work as well.
+Marionet is a portlet that operates with a remote web app – it is a web proxy portlet like WebProxyPortlet, portletbridges and html2jsr286.
+It is written in Python for Django.
 
 == Install requirements
 Python 2.6 and Django 1.2 should be installed to the system.
-Older versions of Django need modifications to <tt>test/settings.py</tt>. Python 2.5 or older do not work (currently).
+Older versions of Django need modifications to <tt>test/settings.py</tt>. Python 2.5 or older do not currently work.
 
 Unless django-portlets is in <tt>PYTHONPATH</tt>, run the command
   make portlets
@@ -22,8 +21,11 @@ The test portal consists of one view. Start the server
 Navigate to http://localhost:8000/demo 
 
 == Testing
-Use <tt>make test</tt> to run the tests.
-
-Please note that the 'portlet test bench' from Caterpillar project needs to be running while running these tests.
+A Rails 'portlet test bench' in port 3000 and the Django test portal in port 8000 need *both* to be running @localhost while running the test suite.
 Get the 'example' Rails app from here[http://github.com/lamikae/rails-portlet]
 or roll your own by following instructions here[http://github.com/lamikae/caterpillar].
+
+Install PyQt4 and BeautifulSoup for the XHR tests.
+
+Use <tt>make test</tt> to run the test suite.
+
