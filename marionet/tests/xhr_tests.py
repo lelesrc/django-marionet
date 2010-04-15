@@ -12,9 +12,9 @@ from PyQt4.QtWebKit import *
 
 from BeautifulSoup import BeautifulSoup
 
-from marionet import log
-from test.settings import TEST_LOG_LEVEL
-log.setlevel(TEST_LOG_LEVEL)
+#from marionet import log
+#from test.settings import TEST_LOG_LEVEL
+#log.setlevel(TEST_LOG_LEVEL)
 
 # the application instance - one for all tests
 QT_APP = QApplication([])
@@ -29,9 +29,9 @@ def evaluateJavaScript(frame, script):
     timer = QTimer()
     QObject.connect(timer, SIGNAL( 'timeout()' ), QT_APP.quit)
     timer.start(200) # msec
-    # apply XHR link click
+    # inject JavaScript
     frame.evaluateJavaScript(QString(script))
-    # execute the injected JavaScript
+    # execute app, which the timer will kill
     QT_APP.exec_()
 
 
@@ -44,16 +44,19 @@ class XHRTestCase(TestCase):
 
 
     def test_javascript(self):
+        """
+        Simple test for validating QWebFrame's reaction.
+        """
         page = QWebPage()
         page.mainFrame().setHtml("""
-<html>
-  <head>
-  <script type="text/javascript">
-  document.write("Hello World!");
-  </script>
-  </head>
-  <body></body>
-</html>
+        <html>
+          <head>
+          <script type="text/javascript">
+          document.write("Hello World!");
+          </script>
+          </head>
+          <body></body>
+        </html>
         """)
         html = page.mainFrame().toHtml()
         soup = BeautifulSoup(html)
@@ -61,48 +64,68 @@ class XHRTestCase(TestCase):
 
 
     def test_jquery(self):
+        """
+        Test for running an external JavaScript library.
+        jQuery is used to do a simple page update.
+        """
         page = QWebPage()
         page.mainFrame().setHtml("""
-<html>
-  <head>
-  <script type="text/javascript" src="/media/js/jquery-1.4.2.min.js"></script>
-  </head>
-  <body></body>
-  <script type="text/javascript">
-  if(jQuery) {
-      $("body").html('Hello World!');
-  }
-  </script>
-</html>
+        <html>
+          <head>
+          <script type="text/javascript" src="/media/js/jquery-1.4.2.min.js"></script>
+          </head>
+          <body></body>
+          <script type="text/javascript">
+          if(jQuery) {
+              $("body").html('Hello World!');
+          }
+          </script>
+        </html>
         """, QUrl( 'http://localhost:8000' ))
         # connect the signal to quit the application after the page is loaded
         page.connect( page, SIGNAL( 'loadFinished(bool)' ), QT_APP.quit )
-        QT_APP.exec_() # start the application to load external JS
+        # start the application to load external JS
+        QT_APP.exec_()
         html = page.mainFrame().toHtml()
         soup = BeautifulSoup(html)
         self.assertEquals('Hello World!',soup.body.text)
 
 
-    def test_xhr_get(self):
-        pass
-
-
-    def test_xhr_post(self):
+    def test_xhr_onclick_post(self):
         """
-        'Click' a link by JavaScript on a web page,
-        this sends an XHR POST that updated the page with 'Hello World!'.
+        Launch a click event on an input element which sends an XHR POST that updates the page.
+
+        Requires the Portlet test bench packaged with Caterpillar.
 
         See http://github.com/lamikae/caterpillar/blob/master/portlet_test_bench/helpers/caterpillar/application_helper.rb
         """
         page = QWebPage()
         page.mainFrame().load(QUrl( self.xUnit_url + 'xhr' ))
         page.connect( page, SIGNAL( 'loadFinished(bool)' ), QT_APP.quit )
-        QT_APP.exec_() # load
-
+        QT_APP.exec_()
+        # launch onClick
         evaluateJavaScript(page.mainFrame(), """
-            $('xhr_post').next().commit.click(); // next() is a way to say "input tag"
+        $$('#xhr_onclick input').first().click();
         """)
-
         html = page.mainFrame().toHtml()
         soup = BeautifulSoup(str(html))
-        self.assertEquals('Hello World!',soup.find(id='post_resp').text)
+        self.assertEquals('Hello World!',soup.find(id='onclick_resp').text)
+
+
+    def test_xhr_form_post(self):
+        """
+        Submit a form which sends an XHR POST that updates the page.
+
+        Requires the Portlet test bench packaged with Caterpillar.
+        """
+        page = QWebPage()
+        page.mainFrame().load(QUrl( self.xUnit_url + 'xhr' ))
+        page.connect( page, SIGNAL( 'loadFinished(bool)' ), QT_APP.quit )
+        QT_APP.exec_()
+        # submit form
+        evaluateJavaScript(page.mainFrame(), """
+        $$('#xhr_form form').first().commit.click();
+        """)
+        html = page.mainFrame().toHtml()
+        soup = BeautifulSoup(str(html))
+        self.assertEquals('Hello World!',soup.find(id='form_resp').text)
