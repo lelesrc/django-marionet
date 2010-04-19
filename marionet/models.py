@@ -90,6 +90,9 @@ class Marionet(Portlet):
         log.debug("__config__")
         return {'url': 'http://0.0.0.0:8000/test'}
 
+    def namespace(self):
+        return '__portlet_%s__' % (self.id)
+
     def my_render_filter(self,*args,**kwargs):
         """ Loaded apparently only once at startup. """
         #log.debug(" -- PREFILTER -- ")
@@ -231,6 +234,10 @@ class PageProcessor(Singleton):
         """ Define available xslt sheets. 
         """
         self.sheets = {'body': self.__body_xslt()}
+        ns = etree.FunctionNamespace('http://github.com/youleaf/django-marionet')
+        ns.prefix = "marionet"
+        ns['link'] = PageProcessor.link
+
 
     def __body_xslt(self):
         """ Define body transformation stylesheet.
@@ -238,16 +245,25 @@ class PageProcessor(Singleton):
         log.debug('define xslt - this message should only appear at startup')
         return etree.XML('''\
 <xsl:stylesheet version="1.0"
-     xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+     xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+     xmlns:marionet="http://github.com/youleaf/django-marionet"
+     >
      <xsl:output method="html"/>
 
      <xsl:param name="namespace" required="yes"/>
 
-     <xsl:template match="html">
+     <xsl:template match="/html/body">
          <div id="{$namespace}_body">
-            <xsl:apply-templates select="body"/>
+           <xsl:apply-templates select="node()"/>
          </div>
      </xsl:template>
+
+    <!-- Rewrite image references -->
+    <xsl:template match="img/@src">
+        <xsl:attribute name="src">
+             <xsl:value-of select="marionet:link(.)"/>
+        </xsl:attribute>
+    </xsl:template>
 
     <!-- Copy through everything that hasn't been modified by the processor -->
     <xsl:template match="text()|@*|*">
@@ -255,6 +271,7 @@ class PageProcessor(Singleton):
           <xsl:apply-templates select="*|@*|text()"/>
         </xsl:copy>
     </xsl:template>
+
 </xsl:stylesheet>''')
 
 
@@ -273,6 +290,12 @@ class PageProcessor(Singleton):
             log.warn("badly structured HTML - using slower fallback parser")
             root = lxml.html.soupparser.fromstring(html)
         return root
+
+    @staticmethod
+    def link(obj,url):
+        print obj
+        print url
+        return url[0]
 
     @staticmethod
     def transform(html_tree,sheet='body'):

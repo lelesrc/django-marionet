@@ -9,7 +9,7 @@ from marionet.tests.utils import RequestFactory
 from test.settings import TEST_LOG_LEVEL
 log.setlevel(TEST_LOG_LEVEL)
 
-#import inspect
+import inspect
 #import libxml2
 #from copy import copy
 
@@ -98,5 +98,13 @@ class PageProcessorTestCase(TestCase):
         self.assert_(meta)
         self.assertEqual('',meta['title'])
 
+    def test_images(self):
+        client = WebClient()
+        self.assert_(client)
+        response = client.get(self.junit_url+'/xslt_images')
+        self.assertEqual(200, response.status)
+        (out,meta) = PageProcessor.process(response)
+        self.assert_(out)
+        print out
 
 
