@@ -237,6 +237,7 @@ class PageProcessor(Singleton):
         ns = etree.FunctionNamespace('http://github.com/youleaf/django-marionet')
         ns.prefix = "marionet"
         ns['link'] = PageProcessor.link
+        ns['image'] = PageProcessor.image
 
 
     def __body_xslt(self):
@@ -265,10 +266,8 @@ class PageProcessor(Singleton):
      </xsl:template>
 
     <!-- Rewrite image references -->
-    <xsl:template match="img/@src">
-        <xsl:attribute name="src">
-             <xsl:value-of select="marionet:link(.,$base)"/>
-        </xsl:attribute>
+    <xsl:template match="img">
+      <xsl:copy-of select="marionet:image(.,string($base))"/>
     </xsl:template>
 
     <!-- Copy through everything that hasn't been modified by the processor -->
@@ -359,12 +358,18 @@ class PageProcessor(Singleton):
     def link(obj,url,base=None):
         log.debug('link: %s' % url)
         # TODO: test "javascript:" and "#"
-        if not re.match('^http', url[0]):
+        return None
+
+    @staticmethod
+    def image(obj,img,base=None):
+        """ Alters the tag. """
+        log.debug('image: %s' % etree.tostring(img[0]))
+
+        src = img[0].get('src')
+        if not re.match('^http', src):
             log.debug('relative url')
             log.debug('base: %s' % base)
             if base:
-                return base[0] + url[0]
+                img[0].set('src',base+src)
 
-        return url[0]
-
-
+        return img
