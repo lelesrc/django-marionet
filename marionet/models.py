@@ -20,6 +20,7 @@ from singletonmixin import Singleton
 from lxml import etree
 import lxml.html.soupparser
 from StringIO import StringIO
+from urlparse import urlparse
 
 
 class PortletFilter():
@@ -110,8 +111,7 @@ class Marionet(Portlet):
         try:
             client = WebClient()
             response = client.get(self.url)
-            (out,meta) = PageProcessor.process(response,sheet='body')
-            log.debug('process passed')
+            (out,meta) = PageProcessor.process(self,response,sheet='body')
             #log.debug(out)
             self.title = meta['title'] # OOPS!
             #log.debug('title: '+self.title)
@@ -276,9 +276,11 @@ class PageProcessor(Singleton):
 
 
     @staticmethod
-    def parse_tree(response):
+    def parse_tree(portlet,response):
         """
-        In case the input is badly formatted html, the soupparser is used.
+        Parses the response HTML.
+        In case the input is badly formatted HTML, the soupparser is used.
+        Inserts portlet meta data into /HTML/HEAD for XSLT parser.
         """
         html = response.read()
         try:
@@ -289,6 +291,15 @@ class PageProcessor(Singleton):
         except lxml.etree.XMLSyntaxError:
             log.warn("badly structured HTML - using slower fallback parser")
             root = lxml.html.soupparser.fromstring(html)
+        # append portlet metadata to /HTML/HEAD
+        if portlet:
+            url = urlparse(portlet.url)
+            base = '%s://%s' % (url.scheme, url.netloc)
+            log.debug("base url: %s" % (base))
+            portlet_tag = etree.Element("portlet",
+                namespace=portlet.namespace(),
+                baseUrl = base)
+            root.find('head').append(portlet_tag)
         return root
 
     @staticmethod
@@ -310,13 +321,13 @@ class PageProcessor(Singleton):
             )
 
     @staticmethod
-    def process(response,*args,**kwargs):
+    def process(portlet,response,*args,**kwargs):
         """ Serializes the response body to a node tree,
         extracts metadata and transforms the portlet body.
         Returns a tuple of (body,metadata).
         """
-        log.debug('processing response')
-        tree = PageProcessor.parse_tree(response)
+        log.debug('processing response for portlet %s' % (portlet))
+        tree = PageProcessor.parse_tree(portlet,response)
         meta = {
             'title': "",
             #'content_type': None,
@@ -340,6 +351,6 @@ class PageProcessor(Singleton):
         log.debug('meta: %s' % (meta))
         html = str(
             PageProcessor.transform(tree,*args,**kwargs))
-        log.debug('processing complete')
+        log.debug('processing of portlet %s complete' % (portlet))
         return (html,meta)
 

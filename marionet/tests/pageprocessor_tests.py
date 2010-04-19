@@ -4,10 +4,12 @@
 from django.test import TestCase
 
 from marionet import log
-from marionet.models import WebClient, PageProcessor
+from marionet.models import Marionet, WebClient, PageProcessor
 from marionet.tests.utils import RequestFactory
 from test.settings import TEST_LOG_LEVEL
 log.setlevel(TEST_LOG_LEVEL)
+
+from lxml import etree
 
 import inspect
 #import libxml2
@@ -25,7 +27,8 @@ class ResponseMock():
 
 class PageProcessorTestCase(TestCase):
     def setUp(self):
-        self.junit_url = 'http://localhost:3000/caterpillar/test_bench/junit'
+        self.junit_base = 'http://localhost:3000'
+        self.junit_url = self.junit_base + '/caterpillar/test_bench/junit'
 
     def test_transform(self):
         """ Simple GET.
@@ -34,7 +37,7 @@ class PageProcessorTestCase(TestCase):
         self.assert_(client)
         response = client.get(self.junit_url+'/xslt_simple')
         self.assertEqual(200, response.status)
-        tree = PageProcessor.parse_tree(response)        
+        tree = PageProcessor.parse_tree(None,response)
         self.assert_(tree)
         #print tree
         # now the very test
@@ -42,14 +45,19 @@ class PageProcessorTestCase(TestCase):
         #print out
 
     def test_parse_tree(self):
+        url = self.junit_url+'/xslt_simple'
+        portlet = Marionet(url=url)
         client = WebClient()
         self.assert_(client)
-        response = client.get(self.junit_url+'/xslt_simple')
+        response = client.get(url)
         self.assertEqual(200, response.status)
-        tree = PageProcessor.parse_tree(response)
+        tree = PageProcessor.parse_tree(portlet,response)
         self.assert_(tree)
-        #print tree
-        #print inspect(tree)
+        # test meta data
+        portlet_tag = tree.find('head/portlet')
+        self.assertEqual(etree._Element,portlet_tag.__class__)
+        self.assertEqual(portlet.namespace(), portlet_tag.get('namespace'))
+        self.assertEqual(self.junit_base, portlet_tag.get('baseUrl'))
 
     def test_process(self):
         """ Response processing chain.
@@ -58,7 +66,7 @@ class PageProcessorTestCase(TestCase):
         self.assert_(client)
         response = client.get(self.junit_url+'/xslt_simple')
         self.assertEqual(200, response.status)
-        (out,meta) = PageProcessor.process(response)
+        (out,meta) = PageProcessor.process(None,response)
         self.assert_(out)
         self.assert_(meta)
 
@@ -77,7 +85,7 @@ class PageProcessorTestCase(TestCase):
             '''
         response = ResponseMock(body=html)
         self.assert_(response)
-        (out,meta) = PageProcessor.process(response)
+        (out,meta) = PageProcessor.process(None,response)
         self.assert_(out)
         self.assert_(meta)
         self.assertEqual('Portlet title',meta['title'])
@@ -93,18 +101,20 @@ class PageProcessorTestCase(TestCase):
             '''
         response = ResponseMock(body=html)
         self.assert_(response)
-        (out,meta) = PageProcessor.process(response)
+        (out,meta) = PageProcessor.process(None,response)
         self.assert_(out)
         self.assert_(meta)
         self.assertEqual('',meta['title'])
 
     def test_images(self):
+        url = self.junit_url+'/xslt_images'
+        portlet = Marionet(url=url)
         client = WebClient()
         self.assert_(client)
-        response = client.get(self.junit_url+'/xslt_images')
+        response = client.get(url)
         self.assertEqual(200, response.status)
-        (out,meta) = PageProcessor.process(response)
+        (out,meta) = PageProcessor.process(portlet,response)
         self.assert_(out)
-        print out
+        #print out
 
 
