@@ -250,8 +250,16 @@ class PageProcessor(Singleton):
      >
      <xsl:output method="html"/>
 
+     <xsl:variable
+        name="namespace"
+        select="/html/head/portlet/@namespace" />
+
+     <xsl:variable
+        name="base"
+        select="/html/head/portlet/@base" />
+
      <xsl:template match="/html/body">
-         <div id="{/html/head/portlet/@namespace}_body">
+         <div id="{$namespace}_body">
            <xsl:apply-templates select="node()"/>
          </div>
      </xsl:template>
@@ -259,7 +267,7 @@ class PageProcessor(Singleton):
     <!-- Rewrite image references -->
     <xsl:template match="img/@src">
         <xsl:attribute name="src">
-             <xsl:value-of select="marionet:link(.)"/>
+             <xsl:value-of select="marionet:link(.,$base)"/>
         </xsl:attribute>
     </xsl:template>
 
@@ -295,16 +303,11 @@ class PageProcessor(Singleton):
             base = '%s://%s' % (url.scheme, url.netloc)
             log.debug("base url: %s" % (base))
             portlet_tag = etree.Element("portlet",
-                namespace=portlet.namespace(),
-                baseUrl = base)
+                namespace = portlet.namespace(),
+                base = base
+                )
             root.find('head').append(portlet_tag)
         return root
-
-    @staticmethod
-    def link(obj,url):
-        print obj
-        print url
-        return url[0]
 
     @staticmethod
     def transform(html_tree,sheet='body'):
@@ -348,4 +351,20 @@ class PageProcessor(Singleton):
             PageProcessor.transform(tree,*args,**kwargs))
         log.debug('processing of portlet %s complete' % (portlet))
         return (html,meta)
+
+
+    ### tag rewrites ###
+
+    @staticmethod
+    def link(obj,url,base=None):
+        log.debug('link: %s' % url)
+        # TODO: test "javascript:" and "#"
+        if not re.match('^http', url[0]):
+            log.debug('relative url')
+            log.debug('base: %s' % base)
+            if base:
+                return base[0] + url[0]
+
+        return url[0]
+
 

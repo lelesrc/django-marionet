@@ -65,7 +65,7 @@ class PageProcessorTestCase(TestCase):
         portlet_tag = tree.find('head/portlet')
         self.assertEqual(etree._Element,portlet_tag.__class__)
         self.assertEqual(portlet.namespace(), portlet_tag.get('namespace'))
-        self.assertEqual(self.junit_base, portlet_tag.get('baseUrl'))
+        self.assertEqual(self.junit_base, portlet_tag.get('base'))
 
     def test_process(self):
         """ Response processing chain.
@@ -123,6 +123,18 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual(200, response.status)
         (out,meta) = PageProcessor.process(portlet,response)
         self.assert_(out)
-        #print out
+        soup = BeautifulSoup(str(out))
+        self.assert_(soup)
+        # absolute url
+        img_url = 'http://localhost:3000/images/portlet_test_bench/rails.png'
+        self.assertEqual(
+            img_url,
+            soup.find(id='image_absolute_url').findNext('img')['src']
+            )
+        # relative url
+        self.assertEqual(
+            img_url,
+            soup.find(id='image_relative_path').findNext('img')['src']
+            )
 
 
