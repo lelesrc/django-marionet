@@ -250,10 +250,8 @@ class PageProcessor(Singleton):
      >
      <xsl:output method="html"/>
 
-     <xsl:param name="namespace" required="yes"/>
-
      <xsl:template match="/html/body">
-         <div id="{$namespace}_body">
+         <div id="{/html/head/portlet/@namespace}_body">
            <xsl:apply-templates select="node()"/>
          </div>
      </xsl:template>
@@ -315,10 +313,7 @@ class PageProcessor(Singleton):
         """
         log.debug(sheet+' xslt')
         xslt_tree = PageProcessor.getInstance().sheets[sheet]
-        return etree.XSLT(xslt_tree)(
-            html_tree,
-            namespace="'__namespace__'"
-            )
+        return etree.XSLT(xslt_tree)(html_tree)
 
     @staticmethod
     def process(portlet,response,*args,**kwargs):

@@ -10,6 +10,7 @@ from test.settings import TEST_LOG_LEVEL
 log.setlevel(TEST_LOG_LEVEL)
 
 from lxml import etree
+from BeautifulSoup import BeautifulSoup
 
 import inspect
 #import libxml2
@@ -33,16 +34,23 @@ class PageProcessorTestCase(TestCase):
     def test_transform(self):
         """ Simple GET.
         """
+        url = self.junit_url+'/xslt_simple'
+        portlet = Marionet(url=url)
         client = WebClient()
         self.assert_(client)
-        response = client.get(self.junit_url+'/xslt_simple')
+        response = client.get(url)
         self.assertEqual(200, response.status)
-        tree = PageProcessor.parse_tree(None,response)
+        tree = PageProcessor.parse_tree(portlet,response)
         self.assert_(tree)
         #print tree
         # now the very test
         out = PageProcessor.transform(tree,'body')
         #print out
+        soup = BeautifulSoup(str(out))
+        self.assert_(soup)
+        portlet_div = soup.find(id='%s_body' % portlet.namespace())
+        self.assert_(portlet_div)
+        #print portlet_div
 
     def test_parse_tree(self):
         url = self.junit_url+'/xslt_simple'
