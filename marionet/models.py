@@ -7,7 +7,6 @@ from django import forms
 from django.db import models
 from django.template import RequestContext
 from django.template.loader import render_to_string
-from django.utils.translation import ugettext_lazy as _
 
 from portlets.models import Portlet
 from portlets.utils import register_portlet
@@ -16,50 +15,44 @@ from marionet import log, Config
 
 import re
 import httpclient
+import traceback
 from singletonmixin import Singleton
 from lxml import etree
 import lxml.html.soupparser
 from StringIO import StringIO
 from urlparse import urlparse, urlunsplit
+from urllib import quote, unquote
+from copy import copy
 
 
 class PortletFilter():
-    """ This is still a mess. """
+
     @staticmethod
     def render_filter(view_func):
         """
         Filter for portlet render requests.
 
-        By applying decorator @render_filter into Portlet methods,
-        this will let the _filter() function to call the desired method
-        with custom arguments.
-
-        Returns a function.
+        If the context url contains a new href for this portlet
+        instance, the portlet.url is updated.
         """
-        def _filter(ctx, *args, **kwargs):
-            log.debug("---------------------------------------------------")
-            if not 'config' is kwargs:
-                config = {'pi':3.1415926535897932384626}
-            else:
-                config = kwargs['config']
+        def do_filter(portlet, context):
+            log.debug(' * * * render filter activated')
+            #log.debug(portlet.url)
+            #log.debug(context['GET'])
+            href_key = '%s_href' % (portlet.namespace())
+            if context['GET'].__contains__(href_key):
+                href = context['GET'].__getitem__(href_key)
+                log.debug('portlet href: %s' % (href))
+                # change url
+                portlet.url = unquote(href)
+            return view_func(portlet,context)
 
-            log.debug("context: %s\nconfig: %s" % (ctx,config))
+        do_filter.__name__ = view_func.__name__
+        do_filter.__dict__ = view_func.__dict__
+        do_filter.__doc__  = view_func.__doc__
 
-            #ctx = RequestContext(request, config)
-            #log.debug(ctx)
-            return view_func(ctx,config,*args,**kwargs)
+        return do_filter
 
-        _filter.__name__ = view_func.__name__
-        _filter.__dict__ = view_func.__dict__
-        _filter.__doc__  = view_func.__doc__
-
-        return _filter
-
-class MarionetFilter(PortletFilter):
-    """ Not used. """
-    def __init__(self, *args, **kwargs):
-        Portlet.__init__(self)
-        log.info("Marionet '%s' version %s" % ('',self.VERSION))
 
 class Marionet(Portlet):
     """ This is still a mess.
@@ -71,62 +64,46 @@ class Marionet(Portlet):
     referer    = models.TextField(u"referer",    blank=True)
 
     # session secret for security given at init, not stored to DB
-    session_secret = None
+    #session_secret = None
     
-    # uhm..
-    __portlet_filter__ = None
-
-    def __unicode__(self):
-        return "%s" % self.url
-
     def __init__(self, *args, **kwargs):
-        if 'session_secret' in kwargs:
-            self.session_secret = kwargs['session_secret']
-            del kwargs['session_secret']
+        #if 'session_secret' in kwargs:
+        #    self.session_secret = kwargs['session_secret']
+        #    del kwargs['session_secret']
         Portlet.__init__(self, *args, **kwargs)
         log.info("Marionet '%s' version %s" % (self.title,self.VERSION))
 
-    def __config__(self):
-        """ Portlet should handle conf from text file """
-        log.debug("__config__")
-        return {'url': 'http://0.0.0.0:8000/test'}
+    def __unicode__(self):
+        return self.url
 
     def namespace(self):
-        log.debug('id: %s' % (self.id))
         return '__portlet_%s__' % (self.id)
 
-    def my_render_filter(self,*args,**kwargs):
-        """ Loaded apparently only once at startup. """
-        #log.debug(" -- PREFILTER -- ")
-        #kwargs['config'] = {'hm':0} # need to think of passing config
-        
-        return PortletFilter.render_filter(self,*args,**kwargs)
+    @PortletFilter.render_filter
+    def render(self, context):
+        """ Render GET.
 
-    #@my_render_filter
-    def render(self, context=None):
-        """
-        """
-        log.debug("VVV render VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV")
-        log.info("render "+self.url)
-        #log.debug(context)
-        try:
-            client = WebClient()
-            # this is the response from the remote server
-            context['response'] = client.get(self.url)
-            (out,meta) = PageProcessor.process(self,context,sheet='body')
-            #log.debug(out)
-            self.title = meta['title'] # OOPS!
-            #log.debug('title: '+self.title)
-            """
             This method has side effects; the self.title is set only
             after render() is called, but currently the portlet title
             is inserted to the page before rendering, thus the title
             is empty...
-            """
+        """
+        log.info(" * * * render * "+self.url)
+        #log.debug('context: %s' % (context))
+        #log.debug('context path: %s' % (context['path']))
+        try:
+            client = WebClient()
+            # this is the response from the remote server
+            response = client.get(self.url)
+            # process the response in this portlet context with this sheet
+            self.context = copy(context)
+            (out,meta) = PageProcessor.process(response,self,sheet='body')
+            #log.debug(out)
+            self.title = meta['title'] # OOPS!
+            log.info('title: '+self.title)
+            log.info('Page length: %i bytes' % (len(out)))
             return out
         except:
-            log.error('processing failed')
-            import traceback
             log.error(traceback.format_exc())
             return "ERROR"
 
@@ -146,8 +123,8 @@ register_portlet(Marionet, "Marionet")
 
 class WebClient():
     """ Modeled after OnlineClient in html2jsr286.
-    Handles state maintenance, in that after each request
-    cookies are updated.
+        Handles state maintenance, in that after each request
+        cookies are updated.
     """
 
     def __init__(self,*args,**kwargs):
@@ -165,22 +142,22 @@ class WebClient():
     def update_cookies(self,response):
         """ Update cookies from HTTP response header 'Set-Cookie'.
 
-        Cookies are never implicitly removed from the headers.
+            Cookies are never implicitly removed from the headers.
 
-        BEWARE: httpclient cannot handle cookies
-        scattered over multiple lines, which is valid
-        in HTTP headers.
+            BEWARE: httpclient cannot handle cookies
+            scattered over multiple lines, which is valid
+            in HTTP headers.
         """
         server_cookies = response.getheader('Set-Cookie')
         if server_cookies:
             for cookie in map(lambda f: f.split('; '), server_cookies.split(', ')):
                 name = cookie[0].split('=')[0]
                 self.cookies[name] = cookie
-        log.debug("Stored %i cookies: %s" % (len(self.cookies),self.cookies))
+            log.debug("Stored %i cookies: %s" % (len(self.cookies),self.cookies))
 
     def add_cookies(self,cookies):
         """ Add cookies from dict.
-        Format: {'foo': ['foo=bar'], 'baz': ['baz=xyz']}
+            Format: {'foo': ['foo=bar'], 'baz': ['baz=xyz']}
         """
         self.cookies.update(cookies)
 
@@ -191,8 +168,9 @@ class WebClient():
 
     def get(self,url,referer=None):
         """ Execute GET request.
-        Returns httplib.HTTPResponse.
+            Returns httplib.HTTPResponse.
         """
+        log.info('GET %s' % (url))
         method = httpclient.GetMethod(url)
         # add cookies
         method.add_request_header('Cookie',self.cookie_headers())
@@ -205,7 +183,7 @@ class WebClient():
 
     def post(self,url,params={}):
         """ Execute POST request.
-        Returns httplib.HTTPResponse.
+            Returns httplib.HTTPResponse.
         """
         method = httpclient.PostMethod(url)
         # add parameters to request body
@@ -277,10 +255,10 @@ class PageProcessor(Singleton):
         <xsl:apply-templates select="node()"/>
     </xsl:template>
 
-   <!-- Rewrite links -->
-   <xsl:template match="a">
-     <xsl:copy-of select="marionet:link(.,string($namespace),string($base))"/>
-   </xsl:template>
+    <!-- Rewrite links -->
+    <xsl:template match="a">
+        <xsl:copy-of select="marionet:link(.,string($namespace),string($base))"/>
+    </xsl:template>
 
     <!-- Rewrite image references -->
     <xsl:template match="img">
@@ -307,10 +285,9 @@ class PageProcessor(Singleton):
 
     @staticmethod
     def parse_tree(portlet,response):
-        """
-        Parses the response HTML.
-        In case the input is badly formatted HTML, the soupparser is used.
-        Inserts portlet meta data into /HTML/HEAD for XSLT parser.
+        """ Parses the response HTML.
+            In case the input is badly formatted HTML, the soupparser is used.
+            Inserts portlet meta data into /HTML/HEAD for XSLT parser.
         """
         html = response.read()
         try:
@@ -345,13 +322,15 @@ class PageProcessor(Singleton):
         if portlet:
             portlet_session.set('namespace', portlet.namespace())
         # append
-        root.find('head').append(portlet_session)
+        head = root.find('head')
+        if head is not None:
+            head.append(portlet_session)
         return root
 
     @staticmethod
-    def transform(html_tree,context,sheet='body'):
+    def transform(html_tree,sheet='body'):
         """ Performs XSL transformation to HTML tree using sheet.
-        @returns	lxml.etree._XSLTResultTree
+            @returns lxml.etree._XSLTResultTree
         """
         log.debug(sheet+' xslt')
         xslt_tree = PageProcessor.getInstance().sheets[sheet]
@@ -360,16 +339,17 @@ class PageProcessor(Singleton):
             foo="'bar'")
 
     @staticmethod
-    def process(portlet,context,**kwargs):
+    def process(html,portlet,**kwargs):
         """ Serializes the response body to a node tree,
-        extracts metadata and transforms the portlet body.
-        Context contains keys 'request' and 'response', where
-        the request is the Portlet request and the response is
-        the remote server response.
-        Returns a tuple of (body,metadata).
+            extracts metadata and transforms the portlet body.
+            Context contains keys 'request' and 'response', where
+            the request is the Portlet request and the response is
+            the remote server response.
+
+            @returns tuple (body,metadata)
         """
         log.debug('processing response for portlet %s' % (portlet))
-        tree = PageProcessor.parse_tree(portlet,context['response'])
+        tree = PageProcessor.parse_tree(portlet,html)
         meta = {
             'title': "",
             #'content_type': None,
@@ -392,7 +372,7 @@ class PageProcessor(Singleton):
         """
         log.debug('meta: %s' % (meta))
         html = str(
-            PageProcessor.transform(tree,context['request'],**kwargs))
+            PageProcessor.transform(tree,**kwargs))
         log.debug('processing of portlet %s complete' % (portlet))
         return (html,meta)
 
@@ -401,8 +381,9 @@ class PageProcessor(Singleton):
 
     @staticmethod
     def link(obj,anchor,namespace,base=None):
+        """ XXX: HACK """
         portlet_url = urlparse("http://localhost:8000/hack")
-        print portlet_url
+        #print portlet_url
         log.debug('anchor: %s' % etree.tostring(anchor[0]))
         # TODO: test "javascript:" and "#"
         
@@ -410,7 +391,7 @@ class PageProcessor(Singleton):
         from urllib import quote
         url_param = quote(
             anchor[0].get('href').encode('utf8'))
-        query = '%s_url=%s' % (namespace, url_param)
+        query = '%s_href=%s' % (namespace, url_param)
         
         anchor[0].set('href', urlunsplit((
             'http',
@@ -439,23 +420,14 @@ class PageProcessor(Singleton):
 
     @staticmethod
     def image(obj,img,base=None):
-        """ Alters the tag. """
-        log.debug('image: %s' % etree.tostring(img[0]))
-
+        """ Alters the img tag. """
+        #log.debug('image: %s' % etree.tostring(img[0]))
         src = img[0].get('src')
         url = PageProcessor.href(None,src,base)
-        print url
         img[0].set('src',url)
-
         return img
 
 
 class PortletUrl():
-    def __init__(self,request,*args,**kwargs):
-        self.request = request
-
-    def url(self):
-        #return urlparse(
-            
-        #    self.request.path #['PATH_INFO']
-        log.debug("yay")
+    def __init__(self,*args,**kwargs):
+        pass

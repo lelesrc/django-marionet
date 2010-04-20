@@ -33,8 +33,8 @@ class PageProcessorTestCase(TestCase):
         self.junit_url = self.junit_base + '/caterpillar/test_bench/junit'
 
     def test_transform(self):
-        """ Simple GET.
-        """
+        ''' Basic body transformation
+        '''
         url = self.junit_url+'/xslt_simple'
         portlet = Marionet(url=url)
         client = WebClient()
@@ -54,6 +54,8 @@ class PageProcessorTestCase(TestCase):
         self.assert_(portlet_div)
 
     def test_parse_tree(self):
+        ''' HTML tree parse
+        '''
         url = self.junit_url+'/xslt_simple'
         portlet = Marionet(url=url)
         client = WebClient()
@@ -69,19 +71,18 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual(self.junit_base, portlet_tag.get('base'))
 
     def test_process(self):
-        """ Response processing chain.
-        """
+        ''' Portlet processing chain
+        '''
         client = WebClient()
         self.assert_(client)
         response = client.get(self.junit_url+'/xslt_simple')
         self.assertEqual(200, response.status)
-        ctx = {'request': None, 'response':response}
-        (out,meta) = PageProcessor.process(None,ctx)
+        (out,meta) = PageProcessor.process(response,None)
         self.assert_(out)
         self.assert_(meta)
-    """
+
     def test_title_ok(self):
-        ''' Response metadata.
+        ''' Portlet title
         '''
         html = '''
 <html>
@@ -95,13 +96,13 @@ class PageProcessorTestCase(TestCase):
             '''
         response = ResponseMock(body=html)
         self.assert_(response)
-        (out,meta) = PageProcessor.process(None,response)
+        (out,meta) = PageProcessor.process(response,None)
         self.assert_(out)
         self.assert_(meta)
         self.assertEqual('Portlet title',meta['title'])
 
     def test_title_bad(self):
-        ''' Response metadata.
+        ''' Empty portlet title
         '''
         html = '''
 <html>
@@ -111,19 +112,21 @@ class PageProcessorTestCase(TestCase):
             '''
         response = ResponseMock(body=html)
         self.assert_(response)
-        (out,meta) = PageProcessor.process(None,response)
+        (out,meta) = PageProcessor.process(response,None)
         self.assert_(out)
         self.assert_(meta)
         self.assertEqual('',meta['title'])
 
     def test_images(self):
+        ''' Image url rewrite
+        '''
         url = self.junit_url+'/basic_tags'
         portlet = Marionet(url=url)
         client = WebClient()
         self.assert_(client)
         response = client.get(url)
         self.assertEqual(200, response.status)
-        (out,meta) = PageProcessor.process(portlet,response)
+        (out,meta) = PageProcessor.process(response,portlet)
         self.assert_(out)
         soup = BeautifulSoup(str(out))
         self.assert_(soup)
@@ -143,27 +146,17 @@ class PageProcessorTestCase(TestCase):
             img_url,
             soup.find(id='image_relative_path').findNext('img')['src']
             )
-    """
-
-    def test_links(self):
-        url = self.junit_url+'/basic_tags'
-        portlet = Marionet.objects.create(url=url)
-        client = WebClient()
-        self.assert_(client)
-        response = client.get(url)
-        self.assertEqual(200, response.status)
-        ctx = {'request': None, 'response':response}
-        (out,meta) = PageProcessor.process(portlet,ctx)
 
     def test_css(self):
+        ''' CSS rewrite
+        '''
         url = self.junit_url+'/css'
         portlet = Marionet(url=url)
         client = WebClient()
         self.assert_(client)
         response = client.get(url)
         self.assertEqual(200, response.status)
-        ctx = {'request': None, 'response':response}
-        (out,meta) = PageProcessor.process(portlet,ctx)
+        (out,meta) = PageProcessor.process(response,portlet)
         self.assert_(out)
         #print out
         soup = BeautifulSoup(str(out))
@@ -180,7 +173,6 @@ class PageProcessorTestCase(TestCase):
         # absolute path
         url = re.search('@import "([^"]*)', soup.find(id='absolute_style_path').text).group(1)
         self.assert_(url)
-        print url
         self.assert_(
             re.match(
                 r'^%s?(.*)' % (css_url),
@@ -193,4 +185,15 @@ class PageProcessorTestCase(TestCase):
         # style in attribute
         self.assert_(soup.find(id='style_attribute')['style'])
 
-        
+    def test_links(self):
+        ''' Link rewrite
+        '''
+        url = self.junit_url+'/basic_tags'
+        portlet = Marionet.objects.create(url=url)
+        client = WebClient()
+        self.assert_(client)
+        response = client.get(url)
+        self.assertEqual(200, response.status)
+        (out,meta) = PageProcessor.process(response,portlet)
+        # XXX: print out
+
