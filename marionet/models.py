@@ -20,7 +20,7 @@ from singletonmixin import Singleton
 from lxml import etree
 import lxml.html.soupparser
 from StringIO import StringIO
-from urlparse import urlparse
+from urlparse import urlparse, urlunsplit
 
 
 class PortletFilter():
@@ -92,6 +92,7 @@ class Marionet(Portlet):
         return {'url': 'http://0.0.0.0:8000/test'}
 
     def namespace(self):
+        log.debug('id: %s' % (self.id))
         return '__portlet_%s__' % (self.id)
 
     def my_render_filter(self,*args,**kwargs):
@@ -101,17 +102,18 @@ class Marionet(Portlet):
         
         return PortletFilter.render_filter(self,*args,**kwargs)
 
-    @my_render_filter
+    #@my_render_filter
     def render(self, context=None):
         """
         """
-        log.debug("VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV")
+        log.debug("VVV render VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV")
         log.info("render "+self.url)
-        log.debug(context)
+        #log.debug(context)
         try:
             client = WebClient()
-            response = client.get(self.url)
-            (out,meta) = PageProcessor.process(self,response,sheet='body')
+            # this is the response from the remote server
+            context['response'] = client.get(self.url)
+            (out,meta) = PageProcessor.process(self,context,sheet='body')
             #log.debug(out)
             self.title = meta['title'] # OOPS!
             #log.debug('title: '+self.title)
@@ -251,6 +253,8 @@ class PageProcessor(Singleton):
      >
      <xsl:output method="html"/>
 
+     <xsl:param name="foo" required="yes" />
+ 
      <xsl:variable
         name="namespace"
         select="/html/head/portlet/@namespace" />
@@ -265,9 +269,15 @@ class PageProcessor(Singleton):
          </div>
      </xsl:template>
 
+   <!-- Rewrite links -->
+   <xsl:template match="a">
+     <xsl:copy-of select="marionet:link(.,string($namespace),string($base))"/>
+   </xsl:template>
+
     <!-- Rewrite image references -->
     <xsl:template match="img">
       <xsl:copy-of select="marionet:image(.,string($base))"/>
+      <div id="{$foo}" />
     </xsl:template>
 
     <!-- Copy through everything that hasn't been modified by the processor -->
@@ -324,22 +334,27 @@ class PageProcessor(Singleton):
         return root
 
     @staticmethod
-    def transform(html_tree,sheet='body'):
+    def transform(html_tree,context,sheet='body'):
         """ Performs XSL transformation to HTML tree using sheet.
         @returns	lxml.etree._XSLTResultTree
         """
         log.debug(sheet+' xslt')
         xslt_tree = PageProcessor.getInstance().sheets[sheet]
-        return etree.XSLT(xslt_tree)(html_tree)
+        return etree.XSLT(xslt_tree)(
+            html_tree,
+            foo="'bar'")
 
     @staticmethod
-    def process(portlet,response,*args,**kwargs):
+    def process(portlet,context,**kwargs):
         """ Serializes the response body to a node tree,
         extracts metadata and transforms the portlet body.
+        Context contains keys 'request' and 'response', where
+        the request is the Portlet request and the response is
+        the remote server response.
         Returns a tuple of (body,metadata).
         """
         log.debug('processing response for portlet %s' % (portlet))
-        tree = PageProcessor.parse_tree(portlet,response)
+        tree = PageProcessor.parse_tree(portlet,context['response'])
         meta = {
             'title': "",
             #'content_type': None,
@@ -362,7 +377,7 @@ class PageProcessor(Singleton):
         """
         log.debug('meta: %s' % (meta))
         html = str(
-            PageProcessor.transform(tree,*args,**kwargs))
+            PageProcessor.transform(tree,context['request'],**kwargs))
         log.debug('processing of portlet %s complete' % (portlet))
         return (html,meta)
 
@@ -370,10 +385,26 @@ class PageProcessor(Singleton):
     ### tag rewrites ###
 
     @staticmethod
-    def link(obj,url,base=None):
-        log.debug('link: %s' % url)
+    def link(obj,anchor,namespace,base=None):
+        portlet_url = urlparse("http://localhost:8000/hack")
+        print portlet_url
+        log.debug('anchor: %s' % etree.tostring(anchor[0]))
         # TODO: test "javascript:" and "#"
-        return None
+        
+        #cgi.parse_qs(urlparse.urlsplit(foo).query)
+        from urllib import quote
+        url_param = quote(
+            anchor[0].get('href').encode('utf8'))
+        query = '%s_url=%s' % (namespace, url_param)
+        
+        anchor[0].set('href', urlunsplit((
+            'http',
+            'localhost:8000',
+            portlet_url.path,
+            query,
+            ''
+            )))
+        return anchor
 
     @staticmethod
     def image(obj,img,base=None):
@@ -397,3 +428,14 @@ class PageProcessor(Singleton):
             pass
 
         return img
+
+
+class PortletUrl():
+    def __init__(self,request,*args,**kwargs):
+        self.request = request
+
+    def url(self):
+        #return urlparse(
+            
+        #    self.request.path #['PATH_INFO']
+        log.debug("yay")

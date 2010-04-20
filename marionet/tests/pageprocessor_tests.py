@@ -74,10 +74,11 @@ class PageProcessorTestCase(TestCase):
         self.assert_(client)
         response = client.get(self.junit_url+'/xslt_simple')
         self.assertEqual(200, response.status)
-        (out,meta) = PageProcessor.process(None,response)
+        ctx = {'request': None, 'response':response}
+        (out,meta) = PageProcessor.process(None,ctx)
         self.assert_(out)
         self.assert_(meta)
-
+    """
     def test_title_ok(self):
         ''' Response metadata.
         '''
@@ -141,5 +142,38 @@ class PageProcessorTestCase(TestCase):
             img_url,
             soup.find(id='image_relative_path').findNext('img')['src']
             )
+    """
 
+    def test_links(self):
+        url = self.junit_url+'/xslt_images'
+        portlet = Marionet.objects.create(url=url)
+        client = WebClient()
+        self.assert_(client)
+        response = client.get(url)
+        self.assertEqual(200, response.status)
+        ctx = {'request': None, 'response':response}
+        (out,meta) = PageProcessor.process(portlet,ctx)
+        self.assert_(out)
+        print out
+        soup = BeautifulSoup(str(out))
+        self.assert_(soup)
+'''
+        # absolute url
+        link_url = 'http://localhost:3000/images/portlet_test_bench/rails.png'
+        self.assertEqual(
+            img_url,
+            soup.find(id='image_absolute_url').findNext('img')['src']
+            )
+        # relative url
+        self.assertEqual(
+            img_url,
+            soup.find(id='image_absolute_path').findNext('img')['src']
+            )
+        # explicit base url
+        self.assertEqual(
+            img_url,
+            soup.find(id='image_relative_path').findNext('img')['src']
+            )
+'''
 
+        
