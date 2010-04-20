@@ -26,7 +26,7 @@ The test portal consists of one view. Start the server
 Navigate to http://localhost:8000/demo 
 
 == Testing
-A Rails 'portlet test bench' in port 3000 and the Django test portal in port 8000 need *both* to be running @localhost while running the test suite.
+A Rails 'portlet test bench' in port 3000 needs to be running @localhost while running the test suite.
 Get the 'example' Rails app from here[http://github.com/lamikae/rails-portlet]
 or roll your own by following instructions here[http://github.com/lamikae/caterpillar].
 

@@ -48,7 +48,8 @@ class XHRTestCase(TestCase):
 
 
     def test_jquery(self):
-        """
+        """ External JavaScript library and QWebPage.
+
         Test for running an external JavaScript library.
         jQuery is used to do a simple page update.
         """
@@ -56,7 +57,7 @@ class XHRTestCase(TestCase):
         page.mainFrame().setHtml("""
         <html>
           <head>
-          <script type="text/javascript" src="/media/js/jquery-1.4.2.min.js"></script>
+          <script type="text/javascript" src="/javascripts/jquery-1.4.2.min.js"></script>
           </head>
           <body></body>
           <script type="text/javascript">
@@ -65,7 +66,7 @@ class XHRTestCase(TestCase):
           }
           </script>
         </html>
-        """, QUrl( 'http://localhost:8000' ))
+        """, QUrl( 'http://localhost:3000' ))
         # connect the signal to quit the application after the page is loaded
         page.connect( page, SIGNAL( 'loadFinished(bool)' ), QT_APP.quit )
         # start the application to load external JS
