@@ -79,8 +79,8 @@ class PageProcessorTestCase(TestCase):
         self.assert_(meta)
 
     def test_title_ok(self):
-        """ Response metadata.
-        """
+        ''' Response metadata.
+        '''
         html = '''
 <html>
   <head>
@@ -99,8 +99,8 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual('Portlet title',meta['title'])
 
     def test_title_bad(self):
-        """ Response metadata.
-        """
+        ''' Response metadata.
+        '''
         html = '''
 <html>
   <head>
@@ -132,6 +132,11 @@ class PageProcessorTestCase(TestCase):
             soup.find(id='image_absolute_url').findNext('img')['src']
             )
         # relative url
+        self.assertEqual(
+            img_url,
+            soup.find(id='image_absolute_path').findNext('img')['src']
+            )
+        # explicit base url
         self.assertEqual(
             img_url,
             soup.find(id='image_relative_path').findNext('img')['src']

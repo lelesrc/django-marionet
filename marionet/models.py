@@ -296,16 +296,31 @@ class PageProcessor(Singleton):
         except lxml.etree.XMLSyntaxError:
             log.warn("badly structured HTML - using slower fallback parser")
             root = lxml.html.soupparser.fromstring(html)
-        # append portlet metadata to /HTML/HEAD
-        if portlet:
-            url = urlparse(portlet.url)
-            base = '%s://%s' % (url.scheme, url.netloc)
+
+        ### append portlet metadata to /HTML/HEAD for the XSLT parser
+        #
+        portlet_session = etree.Element("portlet")
+        #
+        # base url
+        #
+        head_base = root.find('head/base')
+        base = None
+        if head_base is not None:
+            base = head_base.get('href')
+        else:
+            if portlet:
+                url = urlparse(portlet.url)
+                base = '%s://%s' % (url.scheme, url.netloc)
+        if base is not None:
+            portlet_session.set('base', base)
             log.debug("base url: %s" % (base))
-            portlet_tag = etree.Element("portlet",
-                namespace = portlet.namespace(),
-                base = base
-                )
-            root.find('head').append(portlet_tag)
+        #
+        # namespace
+        #
+        if portlet:
+            portlet_session.set('namespace', portlet.namespace())
+        # append
+        root.find('head').append(portlet_session)
         return root
 
     @staticmethod
@@ -366,10 +381,19 @@ class PageProcessor(Singleton):
         log.debug('image: %s' % etree.tostring(img[0]))
 
         src = img[0].get('src')
-        if not re.match('^http', src):
+        if base and not re.match('^http', src):
             log.debug('relative url')
-            log.debug('base: %s' % base)
-            if base:
+            if re.match('^/', src):
+                # prefix host:port
+                baseurl = urlparse(base)
+                img[0].set('src',
+                    '%s://%s%s' % (baseurl.scheme, baseurl.netloc, src))
+            else:
+                # prefix full base
                 img[0].set('src',base+src)
+
+        else:
+            log.debug('no can do!')
+            pass
 
         return img
