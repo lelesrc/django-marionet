@@ -240,6 +240,7 @@ class PageProcessor(Singleton):
         ns.prefix = "marionet"
         ns['link'] = PageProcessor.link
         ns['image'] = PageProcessor.image
+        ns['href'] = PageProcessor.href
 
 
     def __body_xslt(self):
@@ -263,11 +264,18 @@ class PageProcessor(Singleton):
         name="base"
         select="/html/head/portlet/@base" />
 
-     <xsl:template match="/html/body">
-         <div id="{$namespace}_body">
-           <xsl:apply-templates select="node()"/>
-         </div>
-     </xsl:template>
+    <!-- Fetch some info from head, and all of body -->
+    <xsl:template match="/html">
+        <div id="{$namespace}_body">
+            <xsl:apply-templates select="head/link"/>
+            <xsl:apply-templates select="head/style"/>
+            <xsl:apply-templates select="body"/>
+        </div>
+    </xsl:template>
+
+    <xsl:template match="/html/body">
+        <xsl:apply-templates select="node()"/>
+    </xsl:template>
 
    <!-- Rewrite links -->
    <xsl:template match="a">
@@ -278,6 +286,13 @@ class PageProcessor(Singleton):
     <xsl:template match="img">
       <xsl:copy-of select="marionet:image(.,string($base))"/>
       <div id="{$foo}" />
+    </xsl:template>
+
+    <!-- Convert link tags in head to style tags -->
+    <xsl:template match="/html/head/link">
+        <style type="text/css" id="{@id}">
+        @import "<xsl:value-of select="marionet:href(string(@href),string($base))"/>";
+        </style>
     </xsl:template>
 
     <!-- Copy through everything that hasn't been modified by the processor -->
@@ -407,25 +422,30 @@ class PageProcessor(Singleton):
         return anchor
 
     @staticmethod
-    def image(obj,img,base=None):
-        """ Alters the tag. """
-        log.debug('image: %s' % etree.tostring(img[0]))
-
-        src = img[0].get('src')
+    def href(obj,url,base=None):
+        src = url
+        log.debug('parsing url "%s"' % (src))
         if base and not re.match('^http', src):
             log.debug('relative url')
             if re.match('^/', src):
                 # prefix host:port
                 baseurl = urlparse(base)
-                img[0].set('src',
-                    '%s://%s%s' % (baseurl.scheme, baseurl.netloc, src))
+                return '%s://%s%s' % (baseurl.scheme, baseurl.netloc, src)
             else:
                 # prefix full base
-                img[0].set('src',base+src)
-
+                return base+src
         else:
-            log.debug('no can do!')
-            pass
+            return src
+
+    @staticmethod
+    def image(obj,img,base=None):
+        """ Alters the tag. """
+        log.debug('image: %s' % etree.tostring(img[0]))
+
+        src = img[0].get('src')
+        url = PageProcessor.href(None,src,base)
+        print url
+        img[0].set('src',url)
 
         return img
 

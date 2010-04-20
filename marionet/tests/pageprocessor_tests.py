@@ -11,6 +11,7 @@ log.setlevel(TEST_LOG_LEVEL)
 
 from lxml import etree
 from BeautifulSoup import BeautifulSoup
+import re
 
 import inspect
 #import libxml2
@@ -42,15 +43,15 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual(200, response.status)
         tree = PageProcessor.parse_tree(portlet,response)
         self.assert_(tree)
-        #print tree
-        # now the very test
         out = PageProcessor.transform(tree,'body')
-        #print out
         soup = BeautifulSoup(str(out))
         self.assert_(soup)
+        # only body remains
+        self.assertEqual('div', soup.find().name)
+        self.assertEqual(None, soup.find('head'))
+        # namespace is correct
         portlet_div = soup.find(id='%s_body' % portlet.namespace())
         self.assert_(portlet_div)
-        #print portlet_div
 
     def test_parse_tree(self):
         url = self.junit_url+'/xslt_simple'
@@ -116,7 +117,7 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual('',meta['title'])
 
     def test_images(self):
-        url = self.junit_url+'/xslt_images'
+        url = self.junit_url+'/basic_tags'
         portlet = Marionet(url=url)
         client = WebClient()
         self.assert_(client)
@@ -145,7 +146,7 @@ class PageProcessorTestCase(TestCase):
     """
 
     def test_links(self):
-        url = self.junit_url+'/xslt_images'
+        url = self.junit_url+'/basic_tags'
         portlet = Marionet.objects.create(url=url)
         client = WebClient()
         self.assert_(client)
@@ -153,27 +154,43 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual(200, response.status)
         ctx = {'request': None, 'response':response}
         (out,meta) = PageProcessor.process(portlet,ctx)
+
+    def test_css(self):
+        url = self.junit_url+'/css'
+        portlet = Marionet(url=url)
+        client = WebClient()
+        self.assert_(client)
+        response = client.get(url)
+        self.assertEqual(200, response.status)
+        ctx = {'request': None, 'response':response}
+        (out,meta) = PageProcessor.process(portlet,ctx)
         self.assert_(out)
-        print out
+        #print out
         soup = BeautifulSoup(str(out))
         self.assert_(soup)
-'''
         # absolute url
-        link_url = 'http://localhost:3000/images/portlet_test_bench/rails.png'
+        css_url = 'http://localhost:3000/stylesheets/portlet_test_bench/main.css'
+        # search for inline @import url
+        url = re.search('@import "([^"]*)', soup.find(id='absolute_style_url').text).group(1)
+        self.assert_(url)
         self.assertEqual(
-            img_url,
-            soup.find(id='image_absolute_url').findNext('img')['src']
+            css_url,
+            url
             )
-        # relative url
-        self.assertEqual(
-            img_url,
-            soup.find(id='image_absolute_path').findNext('img')['src']
+        # absolute path
+        url = re.search('@import "([^"]*)', soup.find(id='absolute_style_path').text).group(1)
+        self.assert_(url)
+        print url
+        self.assert_(
+            re.match(
+                r'^%s?(.*)' % (css_url),
+                url
+                ),
+            '%s ~= %s' % (url,css_url)
             )
-        # explicit base url
-        self.assertEqual(
-            img_url,
-            soup.find(id='image_relative_path').findNext('img')['src']
-            )
-'''
+        # style_in_body
+        self.assert_(soup.find(id='absolute_style_path').text)
+        # style in attribute
+        self.assert_(soup.find(id='style_attribute')['style'])
 
         
