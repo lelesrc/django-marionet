@@ -63,6 +63,10 @@ class Marionet(Portlet):
     req_method = models.TextField(u"req_method", blank=True)
     referer    = models.TextField(u"referer",    blank=True)
 
+    # session values
+    session = None
+    base = None
+
     # session secret for security given at init, not stored to DB
     #session_secret = None
     
@@ -72,6 +76,7 @@ class Marionet(Portlet):
         #    del kwargs['session_secret']
         Portlet.__init__(self, *args, **kwargs)
         log.info("Marionet '%s' version %s" % (self.title,self.VERSION))
+        self.session = etree.Element("portlet")
 
     def __unicode__(self):
         return self.url
@@ -229,7 +234,6 @@ class PageProcessor(Singleton):
 <xsl:stylesheet version="1.0"
      xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
      xmlns:marionet="http://github.com/youleaf/django-marionet"
-     xmlns="http://www.w3.org/1999/xhtml"
      >
 
 <!--
@@ -241,21 +245,22 @@ class PageProcessor(Singleton):
      <xsl:output method="html" omit-xml-declaration="yes"/>
 
      <xsl:param name="foo" required="yes" />
- 
-     <xsl:variable
-        name="namespace"
-        select="*[local-name()='html']/head/portlet/@namespace" />
 
-     <xsl:variable
-        name="base"
-        select="/html/head/portlet/@base" />
 
     <!-- Fetch some info from head, and all of body -->
     <xsl:template match="*[local-name()='html']">
+         <xsl:variable
+            name="namespace"
+            select="*[local-name()='head']/portlet/@namespace" />
+
+         <xsl:variable
+            name="base"
+            select="*[local-name()='head']/portlet/@base" />
+
         <div id="{$namespace}_body">
-            <xsl:apply-templates select="head/link"/>
-            <xsl:apply-templates select="head/style"/>
-            <xsl:apply-templates select="body"/>
+            <xsl:apply-templates select="*[local-name()='head']/link"/>
+            <xsl:apply-templates select="*[local-name()='head']/style"/>
+            <xsl:apply-templates select="*[local-name()='body']"/>
         </div>
     </xsl:template>
 
@@ -321,9 +326,17 @@ class PageProcessor(Singleton):
 
     @staticmethod
     def append_metadata(root,portlet):
+        """ Alters both root and portlet.
+
+        ElementTree root is added a <portlet> tag with portlet
+        metadata for the XSLT parser.
+
+        Marionet portlet.session is updated to reflect the data.
+        """
+        print root.__class__
         ### append portlet metadata to /HTML/HEAD for the XSLT parser
         #
-        portlet_session = etree.Element("portlet")
+        portlet_session = portlet.session
         #
         # base url
         #
@@ -337,6 +350,8 @@ class PageProcessor(Singleton):
             base = '%s://%s' % (url.scheme, url.netloc)
         if base is not None:
             portlet_session.set('base', base)
+        else:
+            log.debug('no base set')
         #
         # namespace
         #
@@ -346,9 +361,22 @@ class PageProcessor(Singleton):
         #
         # append
         #
-        head = root.find('head')
+        head = root.find('{http://www.w3.org/1999/xhtml}head') # XXX
         if head is not None:
             head.append(portlet_session)
+            #
+            # get title for portlet object.
+            #
+            # strip leading and trailing non-word chars
+            #title = re.sub(
+            #    r'^\W+|\W+$','',
+            #    tree.findtext('head/title'))
+            title = head.find('{http://www.w3.org/1999/xhtml}title') # XXX
+            if title is not None:
+                portlet.title = title.text
+        else:
+            log.warn('OOPS no head!')
+
         #"""
         log.debug(' # spiced tree')
         log.debug(etree.tostring(root))
@@ -379,6 +407,7 @@ class PageProcessor(Singleton):
         """
         #log.debug('processing response for portlet %s' % (portlet))
         tree = PageProcessor.parse_tree(html)
+        """
         meta = {
             'title': None,
             #'content_type': None,
@@ -392,14 +421,17 @@ class PageProcessor(Singleton):
                 tree.findtext('head/title'))
         except TypeError:
             pass
-        # get content_type and charset
-        """ Not used so commented out.
+        log.debug('meta: %s' % (meta))
+        """
+        """ 
+        Get content_type and charset.
+        Not used so commented out.
+
         _content = tree.findall('head/meta[@content]')
         if _content:
             (meta['content_type'],meta['charset']) = '; '.split(
                 _content[0].attrib['content'])
         """
-        log.debug('meta: %s' % (meta))
         #
         # add portlet metadata
         #
@@ -411,7 +443,7 @@ class PageProcessor(Singleton):
         log.debug(' # portlet html')
         log.debug(html)
         log.debug(' # # #')
-        return (html,meta)
+        return (html,{}) # meta is deprecated
 
 
     ### tag rewrites ###
