@@ -69,6 +69,29 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual(200, response.status)
         tree = PageProcessor.parse_tree(response)
         self.assert_(tree)
+        self.assertEqual(etree._ElementTree, tree.__class__)
+        # test meta data
+        # trigger side effects!
+        tree = PageProcessor.append_metadata(tree,portlet)
+        #
+        portlet_tag = tree.find('head/portlet')
+        self.assertEqual(portlet_tag.__class__, etree._Element)
+        self.assertEqual(portlet.namespace(), portlet_tag.get('namespace'))
+        self.assertEqual(self.junit_base, portlet_tag.get('base'))
+
+    def test_parse_empty_tree(self):
+        ''' Empty tree parse
+        '''
+        url = self.junit_url+'/empty'
+        portlet = Marionet.objects.create(url=url)
+        client = WebClient()
+        self.assert_(client)
+        response = client.get(url)
+        self.assertEqual(200, response.status)
+        tree = PageProcessor.parse_tree(response)
+        print tree
+        self.assert_(tree)
+        self.assertEqual(etree._ElementTree, tree.__class__)
         # test meta data
         # trigger side effects!
         tree = PageProcessor.append_metadata(tree,portlet)

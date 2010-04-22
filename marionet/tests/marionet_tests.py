@@ -15,6 +15,7 @@ from portlets.models import Slot
 import portlets.utils
 
 from urllib import quote, unquote
+from BeautifulSoup import BeautifulSoup
 
 from marionet import log
 from marionet.models import Marionet, PortletFilter
@@ -35,6 +36,8 @@ class MarionetTestCase(TestCase):
         self.junit_url = self.junit_base + '/caterpillar/test_bench/junit'
         #self.session_secret='xxx'
 
+    #'''
+
     def test_create(self):
         """ Database object creation
         """
@@ -52,9 +55,11 @@ class MarionetTestCase(TestCase):
     def test_render(self):
         """ Basic GET
         """
-        url = self.junit_url
-        portlet = Marionet(url=url,title='junit index')
+        url = self.junit_url + '/index'
+        portlet = Marionet.objects.create(url=url,title='junit index')
         self.assert_(portlet)
+        self.assertEqual(1,portlet.id)
+        self.assertEqual('__portlet_1__',portlet.namespace())
 
         path = '/page/1'
         request = RequestFactory().get(path)
@@ -67,6 +72,18 @@ class MarionetTestCase(TestCase):
         self.assert_(portlet.context)
         self.assertEqual(path,portlet.context['path'])
         self.assertEqual(url,portlet.url)
+        self.assertEqual('junit index', portlet.title)
+
+        soup = BeautifulSoup(str(out))
+        self.assert_(soup)
+        # only body remains
+        self.assertEqual('div', soup.find().name)
+        self.assertEqual(None, soup.find('head'))
+        # namespace is correct
+        portlet_div = soup.find(id='%s_body' % portlet.namespace())
+        self.assert_(portlet_div)
+
+    #'''
 
     def test_portlet_url(self):
         """ Portlet URL
@@ -93,6 +110,17 @@ class MarionetTestCase(TestCase):
         self.assert_(portlet.context)
         self.assertEqual('/page/1',portlet.context['path'])
         self.assertEqual(href,portlet.url)
+
+        soup = BeautifulSoup(str(out))
+        self.assert_(soup)
+        # only body remains
+        self.assertEqual('div', soup.find().name)
+        self.assertEqual(None, soup.find('head'))
+        # namespace is correct
+        portlet_div = soup.find(id='%s_body' % portlet.namespace())
+        self.assert_(portlet_div)
+        link = portlet_div.find('a')
+        self.assert_(link)
 
     ''' secret is not used yet
     def test_secret(self):

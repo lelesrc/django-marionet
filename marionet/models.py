@@ -103,8 +103,6 @@ class Marionet(Portlet):
             # process the response in this portlet context with this sheet
             self.context = copy(context)
             (out,meta) = PageProcessor.process(response,self,sheet='body')
-            #log.debug(out)
-            self.title = meta['title'] # OOPS!
             log.info('title: '+self.title)
             log.info('Page length: %i bytes' % (len(out)))
             return out
