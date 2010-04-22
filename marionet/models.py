@@ -305,16 +305,15 @@ class PageProcessor(Singleton):
         log.debug(' # # #')
         """
         try:
-            root = etree.parse(
-                StringIO(
-                    html
-                    ))
+            root = etree.fromstring(html).getroottree()
         except lxml.etree.XMLSyntaxError:
+            log.debug(traceback.format_exc())
             log.warn("badly structured HTML - using slower fallback parser")
-            root = lxml.html.soupparser.fromstring(html)
+            root = lxml.html.soupparser.fromstring(html).getroottree()
 
         """
         log.debug(' # parsed tree')
+        log.debug(root.__class__)
         log.debug(etree.tostring(root))
         log.debug(' # # #')
         """
@@ -357,10 +356,11 @@ class PageProcessor(Singleton):
             xmlns = m.group(1)
         else:
             xmlns = ''
+        log.debug('xmlns: '+xmlns)
         #
         # append
         #
-        head = root.find('{%s}head' % xmlns)
+        head = root.find('//{%s}head' % xmlns)
         if head is not None:
             head.append(portlet.session)
             #

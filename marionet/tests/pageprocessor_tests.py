@@ -58,6 +58,8 @@ class PageProcessorTestCase(TestCase):
         portlet_div = soup.find(id='%s_body' % portlet.namespace())
         self.assert_(portlet_div)
 
+    #"""
+
     def test_parse_tree(self):
         ''' HTML tree parse
         '''
@@ -68,16 +70,17 @@ class PageProcessorTestCase(TestCase):
         response = client.get(url)
         self.assertEqual(200, response.status)
         tree = PageProcessor.parse_tree(response)
-        self.assert_(tree)
-        self.assertEqual(etree._ElementTree, tree.__class__)
+        self.assertEqual(tree.__class__, etree._ElementTree)
         # test meta data
         # trigger side effects!
         tree = PageProcessor.append_metadata(tree,portlet)
         #
-        portlet_tag = tree.find('head/portlet')
+        portlet_tag = tree.find('//head/portlet')
         self.assertEqual(portlet_tag.__class__, etree._Element)
-        self.assertEqual(portlet.namespace(), portlet_tag.get('namespace'))
-        self.assertEqual(self.junit_base, portlet_tag.get('base'))
+        self.assertEqual(portlet_tag.get('namespace'), portlet.namespace())
+        self.assertEqual(portlet_tag.get('base'), self.junit_base)
+
+    #"""
 
     def test_parse_empty_tree(self):
         ''' Empty tree parse
@@ -89,17 +92,15 @@ class PageProcessorTestCase(TestCase):
         response = client.get(url)
         self.assertEqual(200, response.status)
         tree = PageProcessor.parse_tree(response)
-        print tree
-        self.assert_(tree)
         self.assertEqual(etree._ElementTree, tree.__class__)
         # test meta data
         # trigger side effects!
         tree = PageProcessor.append_metadata(tree,portlet)
         #
-        portlet_tag = tree.find('head/portlet')
+        portlet_tag = tree.find('//html/head/portlet')
         self.assertEqual(portlet_tag.__class__, etree._Element)
-        self.assertEqual(portlet.namespace(), portlet_tag.get('namespace'))
-        self.assertEqual(self.junit_base, portlet_tag.get('base'))
+        self.assertEqual(portlet_tag.get('namespace'), portlet.namespace())
+        self.assertEqual(portlet_tag.get('base'), self.junit_base)
 
     def test_process(self):
         ''' Portlet processing chain
@@ -254,8 +255,6 @@ class PageProcessorTestCase(TestCase):
         (out,meta) = PageProcessor.process(response,portlet)
         # XXX: print out
 
-    #"""
-
     def __test_doctype(self,type):
         ''' Same test for different DOCTYPEs
         '''
@@ -317,6 +316,28 @@ class PageProcessorTestCase(TestCase):
         ''' HTML 5
         '''
         self.__test_doctype('html5')
+
+    #"""
+
+    def test_bench(self):
+        ''' Portlet test bench index
+        '''
+        url = self.junit_base + '/caterpillar/test_bench'
+        portlet = Marionet.objects.create(url=url)
+        client = WebClient()
+        self.assert_(client)
+        response = client.get(url)
+        self.assertEqual(200, response.status)
+        tree = PageProcessor.parse_tree(response)
+        self.assertEqual(tree.__class__, etree._ElementTree)
+        # test meta data
+        # trigger side effects!
+        tree = PageProcessor.append_metadata(tree,portlet)
+        #
+        portlet_tag = tree.find('//html/head/portlet')
+        self.assertEqual(portlet_tag.__class__, etree._Element)
+        self.assertEqual(portlet_tag.get('namespace'), portlet.namespace())
+        self.assertEqual(portlet_tag.get('base'), self.junit_base)
 
 
     """ xslt does not handle this
