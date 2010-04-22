@@ -292,7 +292,7 @@ class PageProcessor(Singleton):
 
 
     @staticmethod
-    def parse_tree(portlet,response):
+    def parse_tree(response):
         """ Parses the response HTML.
             In case the input is badly formatted HTML, the soupparser is used.
             Inserts portlet meta data into /HTML/HEAD for XSLT parser.
@@ -312,6 +312,15 @@ class PageProcessor(Singleton):
             log.warn("badly structured HTML - using slower fallback parser")
             root = lxml.html.soupparser.fromstring(html)
 
+        #"""
+        log.debug(' # parsed tree')
+        log.debug(etree.tostring(root))
+        log.debug(' # # #')
+        #"""
+        return root
+
+    @staticmethod
+    def append_metadata(root,portlet):
         ### append portlet metadata to /HTML/HEAD for the XSLT parser
         #
         portlet_session = etree.Element("portlet")
@@ -323,23 +332,25 @@ class PageProcessor(Singleton):
         if head_base is not None:
             base = head_base.get('href')
         else:
-            if portlet:
-                url = urlparse(portlet.url)
-                base = '%s://%s' % (url.scheme, url.netloc)
+            # TODO: move to portlet.base
+            url = urlparse(portlet.url)
+            base = '%s://%s' % (url.scheme, url.netloc)
         if base is not None:
             portlet_session.set('base', base)
-            #log.debug("base url: %s" % (base))
         #
         # namespace
         #
         if portlet:
             portlet_session.set('namespace', portlet.namespace())
+        log.debug("portlet session: %s" % (etree.tostring(portlet_session)))
+        #
         # append
+        #
         head = root.find('head')
         if head is not None:
             head.append(portlet_session)
         #"""
-        log.debug(' # parsed tree')
+        log.debug(' # spiced tree')
         log.debug(etree.tostring(root))
         log.debug(' # # #')
         #"""
@@ -367,7 +378,7 @@ class PageProcessor(Singleton):
             @returns tuple (body,metadata)
         """
         #log.debug('processing response for portlet %s' % (portlet))
-        tree = PageProcessor.parse_tree(portlet,html)
+        tree = PageProcessor.parse_tree(html)
         meta = {
             'title': None,
             #'content_type': None,
@@ -389,6 +400,11 @@ class PageProcessor(Singleton):
                 _content[0].attrib['content'])
         """
         log.debug('meta: %s' % (meta))
+        #
+        # add portlet metadata
+        #
+        PageProcessor.append_metadata(tree,portlet)
+
         html = str(
             PageProcessor.transform(tree,**kwargs))
         #log.debug('processing of portlet %s complete' % (portlet))
