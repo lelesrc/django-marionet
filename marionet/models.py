@@ -229,21 +229,29 @@ class PageProcessor(Singleton):
 <xsl:stylesheet version="1.0"
      xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
      xmlns:marionet="http://github.com/youleaf/django-marionet"
+     xmlns="http://www.w3.org/1999/xhtml"
      >
-     <xsl:output method="html"/>
+
+<!--
+    <xsl:namespace-alias stylesheet-prefix="xhtml" 
+          result-prefix=""/>
+-->
+ 
+
+     <xsl:output method="html" omit-xml-declaration="yes"/>
 
      <xsl:param name="foo" required="yes" />
  
      <xsl:variable
         name="namespace"
-        select="/html/head/portlet/@namespace" />
+        select="*[local-name()='html']/head/portlet/@namespace" />
 
      <xsl:variable
         name="base"
         select="/html/head/portlet/@base" />
 
     <!-- Fetch some info from head, and all of body -->
-    <xsl:template match="/html">
+    <xsl:template match="*[local-name()='html']">
         <div id="{$namespace}_body">
             <xsl:apply-templates select="head/link"/>
             <xsl:apply-templates select="head/style"/>
@@ -251,7 +259,7 @@ class PageProcessor(Singleton):
         </div>
     </xsl:template>
 
-    <xsl:template match="/html/body">
+    <xsl:template match="body">
         <xsl:apply-templates select="node()"/>
     </xsl:template>
 
@@ -290,6 +298,11 @@ class PageProcessor(Singleton):
             Inserts portlet meta data into /HTML/HEAD for XSLT parser.
         """
         html = response.read()
+        #"""
+        log.debug(' # input HTML')
+        log.debug(html)
+        log.debug(' # # #')
+        #"""
         try:
             root = etree.parse(
                 StringIO(
@@ -315,7 +328,7 @@ class PageProcessor(Singleton):
                 base = '%s://%s' % (url.scheme, url.netloc)
         if base is not None:
             portlet_session.set('base', base)
-            log.debug("base url: %s" % (base))
+            #log.debug("base url: %s" % (base))
         #
         # namespace
         #
@@ -325,6 +338,11 @@ class PageProcessor(Singleton):
         head = root.find('head')
         if head is not None:
             head.append(portlet_session)
+        #"""
+        log.debug(' # parsed tree')
+        log.debug(etree.tostring(root))
+        log.debug(' # # #')
+        #"""
         return root
 
     @staticmethod
@@ -332,7 +350,7 @@ class PageProcessor(Singleton):
         """ Performs XSL transformation to HTML tree using sheet.
             @returns lxml.etree._XSLTResultTree
         """
-        log.debug(sheet+' xslt')
+        #log.debug(sheet+' xslt')
         xslt_tree = PageProcessor.getInstance().sheets[sheet]
         return etree.XSLT(xslt_tree)(
             html_tree,
@@ -348,10 +366,10 @@ class PageProcessor(Singleton):
 
             @returns tuple (body,metadata)
         """
-        log.debug('processing response for portlet %s' % (portlet))
+        #log.debug('processing response for portlet %s' % (portlet))
         tree = PageProcessor.parse_tree(portlet,html)
         meta = {
-            'title': "",
+            'title': None,
             #'content_type': None,
             #'charset': None,
             }
@@ -373,7 +391,10 @@ class PageProcessor(Singleton):
         log.debug('meta: %s' % (meta))
         html = str(
             PageProcessor.transform(tree,**kwargs))
-        log.debug('processing of portlet %s complete' % (portlet))
+        #log.debug('processing of portlet %s complete' % (portlet))
+        log.debug(' # portlet html')
+        log.debug(html)
+        log.debug(' # # #')
         return (html,meta)
 
 
