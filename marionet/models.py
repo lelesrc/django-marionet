@@ -300,7 +300,6 @@ class PageProcessor(Singleton):
     def parse_tree(response):
         """ Parses the response HTML.
             In case the input is badly formatted HTML, the soupparser is used.
-            Inserts portlet meta data into /HTML/HEAD for XSLT parser.
         """
         html = response.read()
         #"""
@@ -328,15 +327,11 @@ class PageProcessor(Singleton):
     def append_metadata(root,portlet):
         """ Alters both root and portlet.
 
-        ElementTree root is added a <portlet> tag with portlet
+        ElementTree root is added a /html/head/portlet tag with portlet
         metadata for the XSLT parser.
 
         Marionet portlet.session is updated to reflect the data.
         """
-        print root.__class__
-        ### append portlet metadata to /HTML/HEAD for the XSLT parser
-        #
-        portlet_session = portlet.session
         #
         # base url
         #
@@ -349,21 +344,20 @@ class PageProcessor(Singleton):
             url = urlparse(portlet.url)
             base = '%s://%s' % (url.scheme, url.netloc)
         if base is not None:
-            portlet_session.set('base', base)
+            portlet.session.set('base', base)
         else:
             log.debug('no base set')
         #
         # namespace
         #
         if portlet:
-            portlet_session.set('namespace', portlet.namespace())
-        log.debug("portlet session: %s" % (etree.tostring(portlet_session)))
+            portlet.session.set('namespace', portlet.namespace())
         #
         # append
         #
         head = root.find('{http://www.w3.org/1999/xhtml}head') # XXX
         if head is not None:
-            head.append(portlet_session)
+            head.append(portlet.session)
             #
             # get title for portlet object.
             #
@@ -378,6 +372,7 @@ class PageProcessor(Singleton):
             log.warn('OOPS no head!')
 
         #"""
+        log.debug("portlet session: %s" % (etree.tostring(portlet.session)))
         log.debug(' # spiced tree')
         log.debug(etree.tostring(root))
         log.debug(' # # #')
