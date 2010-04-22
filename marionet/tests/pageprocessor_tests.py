@@ -32,11 +32,13 @@ class PageProcessorTestCase(TestCase):
         self.junit_base = 'http://localhost:3000'
         self.junit_url = self.junit_base + '/caterpillar/test_bench/junit'
 
+#    """
+
     def test_transform(self):
         ''' Basic body transformation
         '''
         url = self.junit_url+'/xslt_simple'
-        portlet = Marionet(url=url)
+        portlet = Marionet.objects.create(url=url)
         client = WebClient()
         self.assert_(client)
         response = client.get(url)
@@ -57,7 +59,7 @@ class PageProcessorTestCase(TestCase):
         ''' HTML tree parse
         '''
         url = self.junit_url+'/xslt_simple'
-        portlet = Marionet(url=url)
+        portlet = Marionet.objects.create(url=url)
         client = WebClient()
         self.assert_(client)
         response = client.get(url)
@@ -73,13 +75,24 @@ class PageProcessorTestCase(TestCase):
     def test_process(self):
         ''' Portlet processing chain
         '''
+        url = self.junit_url+'/xslt_simple'
+        portlet = Marionet.objects.create(url=url)
         client = WebClient()
         self.assert_(client)
-        response = client.get(self.junit_url+'/xslt_simple')
+        response = client.get(url)
         self.assertEqual(200, response.status)
-        (out,meta) = PageProcessor.process(response,None)
+        (out,meta) = PageProcessor.process(response,portlet)
         self.assert_(out)
         self.assert_(meta)
+
+        soup = BeautifulSoup(str(out))
+        self.assert_(soup)
+        # only body remains
+        self.assertEqual('div', soup.find().name)
+        self.assertEqual(None, soup.find('head'))
+        # namespace is correct
+        portlet_div = soup.find(id='%s_body' % portlet.namespace())
+        self.assert_(portlet_div)
 
     def test_title_ok(self):
         ''' Portlet title
@@ -101,6 +114,12 @@ class PageProcessorTestCase(TestCase):
         self.assert_(meta)
         self.assertEqual('Portlet title',meta['title'])
 
+        soup = BeautifulSoup(str(out))
+        self.assert_(soup)
+        # only body remains
+        self.assertEqual('div', soup.find().name)
+        self.assertEqual(None, soup.find('head'))
+
     def test_title_bad(self):
         ''' Empty portlet title
         '''
@@ -115,7 +134,14 @@ class PageProcessorTestCase(TestCase):
         (out,meta) = PageProcessor.process(response,None)
         self.assert_(out)
         self.assert_(meta)
-        self.assertEqual('',meta['title'])
+        self.assertEqual(None,meta['title'])
+
+        soup = BeautifulSoup(str(out))
+        self.assert_(soup)
+        # only body remains
+        self.assertEqual('div', soup.find().name)
+        self.assertEqual(None, soup.find('head'))
+
 
     def test_images(self):
         ''' Image url rewrite
@@ -197,3 +223,71 @@ class PageProcessorTestCase(TestCase):
         (out,meta) = PageProcessor.process(response,portlet)
         # XXX: print out
 
+#    """
+
+    def __test_doctype(self,type):
+        ''' Same test for different DOCTYPEs
+        '''
+        url = self.junit_url+'/doctype_'+type
+
+        portlet = Marionet.objects.create(url=url)
+        client = WebClient()
+        self.assert_(client)
+        response = client.get(url)
+        self.assertEqual(200, response.status)
+        (out,meta) = PageProcessor.process(response,portlet)
+        self.assert_(out)
+        self.assert_(meta)
+
+        soup = BeautifulSoup(str(out))
+        self.assert_(soup)
+        # only body remains
+        self.assertEqual('div', soup.find().name)
+        self.assertEqual(None, soup.find('head'))
+        '''
+        # namespace is correct
+        portlet_div = soup.find(id='%s_body' % portlet.namespace())
+        self.assert_(portlet_div)
+        # title + content are correct
+        self.assertEqual('Portlet title',meta['title'])
+        self.assertEqual('Portlet content',portlet_div.text)
+        '''
+
+    def test_undefined_doctype(self):
+        ''' Undefined HTML doctype
+        '''
+        self.__test_doctype('undefined')
+
+    def test_html4_strict(self):
+        ''' HTML 4.01 Strict
+        '''
+        self.__test_doctype('html4_strict')
+
+    def test_xhtml10_strict(self):
+        ''' XHTML 1.0 Strict
+        '''
+        self.__test_doctype('xhtml10_strict')
+
+    def test_xhtml10_trans(self):
+        ''' XHTML 1.0 Transitional
+        '''
+        self.__test_doctype('xhtml10_transitional')
+
+    def test_xhtml11(self):
+        ''' XHTML 1.1
+        '''
+        self.__test_doctype('xhtml11')
+
+    def test_html5(self):
+        ''' HTML 5
+        '''
+        self.__test_doctype('html5')
+
+    """ xslt does not handle this
+
+    def test_html5_minified(self):
+        ''' Minified HTML 5
+        '''
+        self.__test_doctype('html5_minified')
+
+    """
