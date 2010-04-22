@@ -20,8 +20,8 @@ if DEBUG:
 	log.setlevel('info')
 else:
 	log.setlevel('debug')
-TEST_LOG_LEVEL = 'debug'
-#TEST_LOG_LEVEL = 'critical'
+#TEST_LOG_LEVEL = 'debug'
+TEST_LOG_LEVEL = 'critical'
 
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 MEDIA_ROOT = os.path.join(PROJECT_ROOT, 'media')
