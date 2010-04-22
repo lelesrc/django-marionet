@@ -32,7 +32,7 @@ class PageProcessorTestCase(TestCase):
         self.junit_base = 'http://localhost:3000'
         self.junit_url = self.junit_base + '/caterpillar/test_bench/junit'
 
-#    """
+    #"""
 
     def test_transform(self):
         ''' Basic body transformation
@@ -43,9 +43,12 @@ class PageProcessorTestCase(TestCase):
         self.assert_(client)
         response = client.get(url)
         self.assertEqual(200, response.status)
-        tree = PageProcessor.parse_tree(portlet,response)
+        tree = PageProcessor.parse_tree(response)
         self.assert_(tree)
-        out = PageProcessor.transform(tree,'body')
+        # trigger side effects!
+        tree = PageProcessor.append_metadata(tree,portlet)
+        #
+        out = PageProcessor.transform(tree,sheet='body')
         soup = BeautifulSoup(str(out))
         self.assert_(soup)
         # only body remains
@@ -64,11 +67,14 @@ class PageProcessorTestCase(TestCase):
         self.assert_(client)
         response = client.get(url)
         self.assertEqual(200, response.status)
-        tree = PageProcessor.parse_tree(portlet,response)
+        tree = PageProcessor.parse_tree(response)
         self.assert_(tree)
         # test meta data
+        # trigger side effects!
+        tree = PageProcessor.append_metadata(tree,portlet)
+        #
         portlet_tag = tree.find('head/portlet')
-        self.assertEqual(etree._Element,portlet_tag.__class__)
+        self.assertEqual(portlet_tag.__class__, etree._Element)
         self.assertEqual(portlet.namespace(), portlet_tag.get('namespace'))
         self.assertEqual(self.junit_base, portlet_tag.get('base'))
 
@@ -83,7 +89,7 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual(200, response.status)
         (out,meta) = PageProcessor.process(response,portlet)
         self.assert_(out)
-        self.assert_(meta)
+        #self.assert_(meta)
 
         soup = BeautifulSoup(str(out))
         self.assert_(soup)
@@ -97,6 +103,7 @@ class PageProcessorTestCase(TestCase):
     def test_title_ok(self):
         ''' Portlet title
         '''
+        portlet = Marionet()
         html = '''
 <html>
   <head>
@@ -109,10 +116,10 @@ class PageProcessorTestCase(TestCase):
             '''
         response = ResponseMock(body=html)
         self.assert_(response)
-        (out,meta) = PageProcessor.process(response,None)
+        (out,meta) = PageProcessor.process(response,portlet)
         self.assert_(out)
-        self.assert_(meta)
-        self.assertEqual('Portlet title',meta['title'])
+        #self.assert_(meta)
+        self.assertEqual('Portlet title',portlet.title)
 
         soup = BeautifulSoup(str(out))
         self.assert_(soup)
@@ -123,6 +130,7 @@ class PageProcessorTestCase(TestCase):
     def test_title_bad(self):
         ''' Empty portlet title
         '''
+        portlet = Marionet()
         html = '''
 <html>
   <head>
@@ -131,10 +139,10 @@ class PageProcessorTestCase(TestCase):
             '''
         response = ResponseMock(body=html)
         self.assert_(response)
-        (out,meta) = PageProcessor.process(response,None)
+        (out,meta) = PageProcessor.process(response,portlet)
         self.assert_(out)
-        self.assert_(meta)
-        self.assertEqual(None,meta['title'])
+        #self.assert_(meta)
+        self.assertEqual('',portlet.title)
 
         soup = BeautifulSoup(str(out))
         self.assert_(soup)
@@ -223,7 +231,7 @@ class PageProcessorTestCase(TestCase):
         (out,meta) = PageProcessor.process(response,portlet)
         # XXX: print out
 
-#    """
+    #"""
 
     def __test_doctype(self,type):
         ''' Same test for different DOCTYPEs
@@ -237,21 +245,25 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual(200, response.status)
         (out,meta) = PageProcessor.process(response,portlet)
         self.assert_(out)
-        self.assert_(meta)
+        #self.assert_(meta)
 
         soup = BeautifulSoup(str(out))
         self.assert_(soup)
         # only body remains
         self.assertEqual('div', soup.find().name)
         self.assertEqual(None, soup.find('head'))
-        '''
         # namespace is correct
         portlet_div = soup.find(id='%s_body' % portlet.namespace())
         self.assert_(portlet_div)
+
         # title + content are correct
-        self.assertEqual('Portlet title',meta['title'])
+        self.assertEqual('Portlet title',portlet.title)
         self.assertEqual('Portlet content',portlet_div.text)
-        '''
+
+        # portlet is updated correctly;
+        # base set by remote host
+        #self.assertEqual('http://127.0.0.10:3000/', portlet.base)
+        #print etree.tostring(portlet.session)
 
     def test_undefined_doctype(self):
         ''' Undefined HTML doctype
@@ -282,6 +294,7 @@ class PageProcessorTestCase(TestCase):
         ''' HTML 5
         '''
         self.__test_doctype('html5')
+
 
     """ xslt does not handle this
 

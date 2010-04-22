@@ -236,27 +236,26 @@ class PageProcessor(Singleton):
      xmlns:marionet="http://github.com/youleaf/django-marionet"
      >
 
-<!--
-    <xsl:namespace-alias stylesheet-prefix="xhtml" 
+    <xsl:namespace-alias stylesheet-prefix="xmlns:marionet" 
           result-prefix=""/>
--->
- 
 
-     <xsl:output method="html" omit-xml-declaration="yes"/>
+    <xsl:output method="html" omit-xml-declaration="yes"/>
 
-     <xsl:param name="foo" required="yes" />
+    <!--
+    <xsl:param name="foo" required="yes" />
+    -->
+
+    <xsl:variable
+        name="namespace"
+        select="//*[local-name()='head']/portlet/@namespace" />
+
+    <xsl:variable
+        name="base"
+        select="//*[local-name()='head']/portlet/@base" />
 
 
     <!-- Fetch some info from head, and all of body -->
     <xsl:template match="*[local-name()='html']">
-         <xsl:variable
-            name="namespace"
-            select="*[local-name()='head']/portlet/@namespace" />
-
-         <xsl:variable
-            name="base"
-            select="*[local-name()='head']/portlet/@base" />
-
         <div id="{$namespace}_body">
             <xsl:apply-templates select="*[local-name()='head']/link"/>
             <xsl:apply-templates select="*[local-name()='head']/style"/>
@@ -302,11 +301,11 @@ class PageProcessor(Singleton):
             In case the input is badly formatted HTML, the soupparser is used.
         """
         html = response.read()
-        #"""
+        """
         log.debug(' # input HTML')
         log.debug(html)
         log.debug(' # # #')
-        #"""
+        """
         try:
             root = etree.parse(
                 StringIO(
@@ -316,11 +315,11 @@ class PageProcessor(Singleton):
             log.warn("badly structured HTML - using slower fallback parser")
             root = lxml.html.soupparser.fromstring(html)
 
-        #"""
+        """
         log.debug(' # parsed tree')
         log.debug(etree.tostring(root))
         log.debug(' # # #')
-        #"""
+        """
         return root
 
     @staticmethod
@@ -353,30 +352,46 @@ class PageProcessor(Singleton):
         if portlet:
             portlet.session.set('namespace', portlet.namespace())
         #
+        # get xmlns
+        #
+        m = re.search('{(.*)}', root.getroot().tag ) # hackish ..
+        if m:
+            xmlns = m.group(1)
+        else:
+            xmlns = ''
+        #
         # append
         #
-        head = root.find('{http://www.w3.org/1999/xhtml}head') # XXX
+        head = root.find('{%s}head' % xmlns)
         if head is not None:
             head.append(portlet.session)
             #
             # get title for portlet object.
             #
-            # strip leading and trailing non-word chars
-            #title = re.sub(
-            #    r'^\W+|\W+$','',
-            #    tree.findtext('head/title'))
-            title = head.find('{http://www.w3.org/1999/xhtml}title') # XXX
+            title = head.find('{%s}title' % xmlns)
             if title is not None:
-                portlet.title = title.text
+                # strip leading and trailing non-word chars
+                portlet.title = re.sub(
+                    r'^\W+|\W+$','',
+                    title.text)
+            """
+            Get content_type and charset.
+            Not used so commented out.
+
+            _content = tree.findall('head/meta[@content]')
+            if _content:
+                (meta['content_type'],meta['charset']) = '; '.split(
+                    _content[0].attrib['content'])
+            """
         else:
             log.warn('OOPS no head!')
 
-        #"""
+        """
         log.debug("portlet session: %s" % (etree.tostring(portlet.session)))
         log.debug(' # spiced tree')
         log.debug(etree.tostring(root))
         log.debug(' # # #')
-        #"""
+        """
         return root
 
     @staticmethod
@@ -402,31 +417,6 @@ class PageProcessor(Singleton):
         """
         #log.debug('processing response for portlet %s' % (portlet))
         tree = PageProcessor.parse_tree(html)
-        """
-        meta = {
-            'title': None,
-            #'content_type': None,
-            #'charset': None,
-            }
-        try:
-            # get title,
-            # strip leading and trailing non-word chars
-            meta['title'] = re.sub(
-                r'^\W+|\W+$','',
-                tree.findtext('head/title'))
-        except TypeError:
-            pass
-        log.debug('meta: %s' % (meta))
-        """
-        """ 
-        Get content_type and charset.
-        Not used so commented out.
-
-        _content = tree.findall('head/meta[@content]')
-        if _content:
-            (meta['content_type'],meta['charset']) = '; '.split(
-                _content[0].attrib['content'])
-        """
         #
         # add portlet metadata
         #
@@ -434,10 +424,11 @@ class PageProcessor(Singleton):
 
         html = str(
             PageProcessor.transform(tree,**kwargs))
-        #log.debug('processing of portlet %s complete' % (portlet))
+        """
         log.debug(' # portlet html')
         log.debug(html)
         log.debug(' # # #')
+        """
         return (html,{}) # meta is deprecated
 
 
