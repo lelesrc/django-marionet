@@ -439,21 +439,26 @@ class PageProcessor(Singleton):
     @staticmethod
     def link(obj,anchor,namespace,base=None):
         """ XXX: HACK """
-        portlet_url = urlparse("http://localhost:8000/hack")
+        #portlet_url = urlparse("http://localhost:8000/hack")
         #print portlet_url
-        log.debug('anchor: %s' % etree.tostring(anchor[0]))
+        #log.debug('anchor: %s' % etree.tostring(anchor[0]))
         # TODO: test "javascript:" and "#"
         
+        path = '/hesari'
+        
+        href= anchor[0].get('href')
+        if not href:
+            return anchor
+        
         #cgi.parse_qs(urlparse.urlsplit(foo).query)
-        from urllib import quote
         url_param = quote(
-            anchor[0].get('href').encode('utf8'))
+            href.encode('utf8'))
         query = '%s_href=%s' % (namespace, url_param)
         
         anchor[0].set('href', urlunsplit((
             'http',
             'localhost:8000',
-            portlet_url.path,
+            path,
             query,
             ''
             )))
