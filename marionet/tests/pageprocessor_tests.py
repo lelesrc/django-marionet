@@ -12,6 +12,7 @@ log.setlevel(TEST_LOG_LEVEL)
 from lxml import etree
 from BeautifulSoup import BeautifulSoup
 import re
+from urlparse import urljoin
 
 import inspect
 #import libxml2
@@ -58,8 +59,6 @@ class PageProcessorTestCase(TestCase):
         portlet_div = soup.find(id='%s_body' % portlet.namespace())
         self.assert_(portlet_div)
 
-    #"""
-
     def test_parse_tree(self):
         ''' HTML tree parse
         '''
@@ -80,7 +79,25 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual(portlet_tag.get('namespace'), portlet.namespace())
         self.assertEqual(portlet_tag.get('base'), self.junit_base)
 
-    #"""
+    def test_bench_tree(self):
+        ''' Portlet test bench index
+        '''
+        url = self.junit_base + '/caterpillar/test_bench'
+        portlet = Marionet.objects.create(url=url)
+        client = WebClient()
+        self.assert_(client)
+        response = client.get(url)
+        self.assertEqual(200, response.status)
+        tree = PageProcessor.parse_tree(response)
+        self.assertEqual(tree.__class__, etree._ElementTree)
+        # test meta data
+        # trigger side effects!
+        tree = PageProcessor.append_metadata(tree,portlet)
+        #
+        portlet_tag = tree.find('//html/head/portlet')
+        self.assertEqual(portlet_tag.__class__, etree._Element)
+        self.assertEqual(portlet_tag.get('namespace'), portlet.namespace())
+        self.assertEqual(portlet_tag.get('base'), self.junit_base)
 
     def test_parse_empty_tree(self):
         ''' Empty tree parse
@@ -174,7 +191,6 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual('div', soup.find().name)
         self.assertEqual(None, soup.find('head'))
 
-
     def test_images(self):
         ''' Image url rewrite
         '''
@@ -191,18 +207,18 @@ class PageProcessorTestCase(TestCase):
         # absolute url
         img_url = 'http://localhost:3000/images/portlet_test_bench/rails.png'
         self.assertEqual(
-            img_url,
-            soup.find(id='image_absolute_url').findNext('img')['src']
+            soup.find(id='image_absolute_url').findNext('img')['src'],
+            img_url
             )
         # relative url
         self.assertEqual(
-            img_url,
-            soup.find(id='image_absolute_path').findNext('img')['src']
+            soup.find(id='image_absolute_path').findNext('img')['src'],
+            img_url
             )
         # explicit base url
         self.assertEqual(
-            img_url,
-            soup.find(id='image_relative_path').findNext('img')['src']
+            soup.find(id='image_relative_path').findNext('img')['src'],
+            img_url
             )
 
     def test_css(self):
@@ -318,27 +334,6 @@ class PageProcessorTestCase(TestCase):
         self.__test_doctype('html5')
 
     #"""
-
-    def test_bench(self):
-        ''' Portlet test bench index
-        '''
-        url = self.junit_base + '/caterpillar/test_bench'
-        portlet = Marionet.objects.create(url=url)
-        client = WebClient()
-        self.assert_(client)
-        response = client.get(url)
-        self.assertEqual(200, response.status)
-        tree = PageProcessor.parse_tree(response)
-        self.assertEqual(tree.__class__, etree._ElementTree)
-        # test meta data
-        # trigger side effects!
-        tree = PageProcessor.append_metadata(tree,portlet)
-        #
-        portlet_tag = tree.find('//html/head/portlet')
-        self.assertEqual(portlet_tag.__class__, etree._Element)
-        self.assertEqual(portlet_tag.get('namespace'), portlet.namespace())
-        self.assertEqual(portlet_tag.get('base'), self.junit_base)
-
 
     """ xslt does not handle this
 

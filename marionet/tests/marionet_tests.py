@@ -48,9 +48,10 @@ class MarionetTestCase(TestCase):
         self.assert_(portlet)
         _portlet = Marionet.objects.get(id=portlet.id)
         self.assert_(_portlet)
-        self.assertEqual(portlet,_portlet)
-        self.assertEqual(self.junit_url, _portlet.url)
-        self.assertEqual('test portlet', _portlet.title)
+        self.assertEqual(_portlet,portlet)
+        self.assertEqual(_portlet.url, self.junit_url)
+        self.assertEqual(_portlet.title, 'test portlet')
+        self.assertEqual(_portlet.session.get('base'), self.junit_base)
 
     def test_render(self):
         """ Basic GET
@@ -58,8 +59,8 @@ class MarionetTestCase(TestCase):
         url = self.junit_url + '/index'
         portlet = Marionet.objects.create(url=url,title='junit index')
         self.assert_(portlet)
-        self.assertEqual(1,portlet.id)
-        self.assertEqual('__portlet_1__',portlet.namespace())
+        self.assertEqual(portlet.id,1)
+        self.assertEqual(portlet.namespace(),'__portlet_1__')
 
         path = '/page/1'
         request = RequestFactory().get(path)
@@ -70,35 +71,25 @@ class MarionetTestCase(TestCase):
         out = portlet.render(ctx)
         self.assert_(out)
         self.assert_(portlet.context)
-        self.assertEqual(path,portlet.context['path'])
-        self.assertEqual(url,portlet.url)
-        self.assertEqual('junit index', portlet.title)
+        self.assertEqual(portlet.context['path'], path)
+        self.assertEqual(portlet.url, url)
+        self.assertEqual(portlet.title, 'junit index')
 
         soup = BeautifulSoup(str(out))
         self.assert_(soup)
         # only body remains
-        self.assertEqual('div', soup.find().name)
-        self.assertEqual(None, soup.find('head'))
+        self.assertEqual(soup.find().name, 'div')
+        self.assertEqual(soup.find('head'), None)
         # namespace is correct
         portlet_div = soup.find(id='%s_body' % portlet.namespace())
         self.assert_(portlet_div)
 
     #'''
 
-    def test_portlet_url(self):
-        """ Portlet URL
-        """
-        url = self.junit_url
-        portlet = Marionet.objects.create(url=url,title='junit index')
-        self.assert_(portlet)
-
-        # target url
-        href = url + '/target1'
-
+    def __test_target1(self,portlet,href):
         portlet_url_query = '%s_href=%s' % (portlet.namespace(), 
             quote(href.encode('utf8'))
             )
-
         path = '/page/1' + '?' + portlet_url_query
         request = RequestFactory().get(path)
         ctx = RequestContext(request)
@@ -108,19 +99,56 @@ class MarionetTestCase(TestCase):
         out = portlet.render(ctx)
         self.assert_(out)
         self.assert_(portlet.context)
-        self.assertEqual('/page/1',portlet.context['path'])
-        self.assertEqual(href,portlet.url)
+        self.assertEqual(portlet.context['path'],'/page/1')
+        self.assertEqual(portlet.url, 
+            self.junit_base+'/caterpillar/test_bench/junit/target1')
 
         soup = BeautifulSoup(str(out))
         self.assert_(soup)
         # only body remains
-        self.assertEqual('div', soup.find().name)
-        self.assertEqual(None, soup.find('head'))
+        self.assertEqual(soup.find().name, 'div')
+        self.assertEqual(soup.find('head'), None)
         # namespace is correct
         portlet_div = soup.find(id='%s_body' % portlet.namespace())
         self.assert_(portlet_div)
         link = portlet_div.find('a')
         self.assert_(link)
+
+    #'''
+
+    def test_portlet_url(self):
+        """ Portlet URL with absolute url
+        """
+        portlet = Marionet.objects.create(
+            url=self.junit_url, title='junit index')
+        href = self.junit_url + '/target1'
+        self.__test_target1(portlet,href)
+
+    def test_portlet_url__absolute_path(self):
+        """ Portlet URL with absolute path
+        """
+        portlet = Marionet.objects.create(
+            url=self.junit_url, title='junit index')
+        href = '/caterpillar/test_bench/junit/target1'
+        self.__test_target1(portlet,href)
+
+    #'''
+
+    def test_portlet_url__relative_path(self):
+        """ Portlet URL with relative path
+        """
+        portlet = Marionet.objects.create(
+            url=self.junit_url, title='junit index')
+        portlet.session.set('base', self.junit_url) 
+        href = 'target1'
+        self.__test_target1(portlet,href)
+
+        portlet = Marionet.objects.create(
+            url=self.junit_url+'/', title='junit index')
+        portlet.session.set('base', self.junit_url) 
+        href = 'target1'
+        self.__test_target1(portlet,href)
+
 
     ''' secret is not used yet
     def test_secret(self):

@@ -20,8 +20,9 @@ from singletonmixin import Singleton
 from lxml import etree
 import lxml.html.soupparser
 from StringIO import StringIO
-from urlparse import urlparse, urlunsplit
+from urlparse import urlparse, urlunparse, urlunsplit, urljoin
 from urllib import quote, unquote
+from posixpath import normpath
 from copy import copy
 
 
@@ -38,13 +39,17 @@ class PortletFilter():
         def do_filter(portlet, context):
             log.debug(' * * * render filter activated')
             #log.debug(portlet.url)
+            #log.debug(portlet.base)
             #log.debug(context['GET'])
             href_key = '%s_href' % (portlet.namespace())
             if context['GET'].__contains__(href_key):
                 href = context['GET'].__getitem__(href_key)
                 log.debug('portlet href: %s' % (href))
-                # change url
-                portlet.url = unquote(href)
+                # rewrite url
+                url = PageProcessor.href(None,href,portlet.session.get('base'))
+                log.debug('new url: %s' % (url))
+                # update portlet
+                portlet.url = unquote(url)
             return view_func(portlet,context)
 
         do_filter.__name__ = view_func.__name__
@@ -77,6 +82,10 @@ class Marionet(Portlet):
         Portlet.__init__(self, *args, **kwargs)
         log.info("Marionet '%s' version %s" % (self.title,self.VERSION))
         self.session = etree.Element("portlet")
+        _url = urlparse(self.url)
+        self.session.set('base',
+            '%s://%s' % (_url.scheme, _url.netloc))
+        log.debug(etree.tostring(self.session))
 
     def __unicode__(self):
         return self.url
@@ -331,18 +340,13 @@ class PageProcessor(Singleton):
         #
         # base url
         #
+        # by default use portlet session base
+        #
         head_base = root.find('head/base')
-        base = None
         if head_base is not None:
             base = head_base.get('href')
-        else:
-            # TODO: move to portlet.base
-            url = urlparse(portlet.url)
-            base = '%s://%s' % (url.scheme, url.netloc)
-        if base is not None:
+            log.debug('found head base %s' % (base))
             portlet.session.set('base', base)
-        else:
-            log.debug('no base set')
         #
         # namespace
         #
@@ -354,9 +358,9 @@ class PageProcessor(Singleton):
         m = re.search('{(.*)}', root.getroot().tag ) # hackish ..
         if m:
             xmlns = m.group(1)
+            log.debug('xmlns: '+xmlns)
         else:
             xmlns = ''
-        log.debug('xmlns: '+xmlns)
         #
         # append
         #
@@ -456,20 +460,26 @@ class PageProcessor(Singleton):
         return anchor
 
     @staticmethod
-    def href(obj,url,base=None):
-        src = url
-        log.debug('parsing url "%s"' % (src))
-        if base and not re.match('^http', src):
-            log.debug('relative url')
-            if re.match('^/', src):
-                # prefix host:port
+    def href(obj,href,base=None):
+        log.debug('parsing href "%s"' % (href))
+        if base and not re.match('^http', href):
+            log.debug('base: %s' % (base))
+            """
+            if re.match('^/', href):
+                log.debug('absolute path')
                 baseurl = urlparse(base)
-                return '%s://%s%s' % (baseurl.scheme, baseurl.netloc, src)
+                return urljoin(base+'/',href)
             else:
-                # prefix full base
-                return base+src
+            """
+            log.debug('relative path')
+            join = urljoin(base+'/',href)
+            #log.debug(join)
+            img_url = re.sub('(?<!:)//', '/', join)
+            #log.debug(img_url)
+            return img_url
         else:
-            return src
+            log.warn('portlet has no base')
+            return href
 
     @staticmethod
     def image(obj,img,base=None):
