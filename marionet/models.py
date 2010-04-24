@@ -20,10 +20,64 @@ from singletonmixin import Singleton
 from lxml import etree
 import lxml.html.soupparser
 from StringIO import StringIO
-from urlparse import urlparse, urlunparse, urlunsplit, urljoin
+from urlparse import urlparse, urlunparse, urlsplit, urlunsplit, urljoin, ParseResult
+from cgi import parse_qs
 from urllib import quote, unquote
 from posixpath import normpath
 from copy import copy
+
+
+class PortletURL():
+    def __init__(self, location, query, *args, **kwargs):
+        """ Not to be initialized manually. Use static functions.
+        """
+        self.location = location
+        self.query = query
+
+    def __call__(self):
+        return self.__unicode__()
+
+    def __unicode__(self):
+        """ "tostring"
+        """
+        qs = "&".join(map(lambda (k,v): '%s=%s' % (
+            k,quote(v.encode('utf8'))),
+            self.query.items()))
+        return urlunsplit((
+            self.location.scheme,
+            self.location.netloc,
+            self.location.path,
+            qs,
+            ''
+            ))
+
+    @staticmethod
+    def render_url(location, query={}, namespace=None, href=None, base=None, params={}, method='GET'):
+        """ 
+        """
+        log.debug('portlet href: %s' % (href))
+        if href is None:
+            return PortletURL(location, query)
+
+        if base is not None:
+            # rewrite url
+            href = PageProcessor.href(None,href,base)
+
+        # append portlet parameters to query
+        log.debug('context query: %s' % (query))
+        query[namespace+'_href'] = href
+
+        return PortletURL(location, query)
+
+    @staticmethod
+    def action_url(*args):
+        ''' UNIMPLEMENTED '''
+        pass
+
+    @staticmethod
+    def resource_url(*args):
+        ''' UNIMPLEMENTED '''
+        pass
 
 
 class PortletFilter():
@@ -36,12 +90,27 @@ class PortletFilter():
         If the context url contains a new href for this portlet
         instance, the portlet.url is updated.
         """
-        def do_filter(portlet, context):
+        def do_filter(portlet, request, context=None):
             log.debug(' * * * render filter activated')
             #log.debug(portlet.url)
             #log.debug(portlet.base)
             #log.debug(context['GET'])
+            if not context:
+                context = RequestContext(request)
+            context['location'] = ParseResult(
+                'http',
+                '%s:%s' % (request.META['SERVER_NAME'], request.META['SERVER_PORT']),
+                request.path,
+                '',
+                request.META['QUERY_STRING'],
+                ''
+                )
+            context['query'] = parse_qs(context.get('location').query)
+            context['GET'] = request.GET
+            #log.debug(context['query'])
+
             href_key = '%s_href' % (portlet.namespace())
+            #log.debug(href_key)
             if context['GET'].__contains__(href_key):
                 href = context['GET'].__getitem__(href_key)
                 log.debug('portlet href: %s' % (href))
@@ -50,7 +119,9 @@ class PortletFilter():
                 log.debug('new url: %s' % (url))
                 # update portlet
                 portlet.url = unquote(url)
-            return view_func(portlet,context)
+            else:
+                log.debug('no href key')
+            return view_func(portlet,request,context)
 
         do_filter.__name__ = view_func.__name__
         do_filter.__dict__ = view_func.__dict__
@@ -94,7 +165,7 @@ class Marionet(Portlet):
         return '__portlet_%s__' % (self.id)
 
     @PortletFilter.render_filter
-    def render(self, context):
+    def render(self, request, context):
         """ Render GET.
 
             This method has side effects; the self.title is set only
@@ -118,6 +189,33 @@ class Marionet(Portlet):
         except:
             log.error(traceback.format_exc())
             return "ERROR"
+
+    def render_url(self, href, params={}):
+        """ Calls the function with portlet state parameters.
+        """
+        return PortletURL.render_url(
+            location = self.context.get('location'),
+            query = self.context.get('query'),
+            href = href,
+            params = params,
+            namespace = self.namespace(),
+            method = 'GET',
+            base = self.base,
+            )
+
+    '''
+    def action_url(self, href, params={}):
+        return PortletURL.action_url(
+            self.context,
+            {
+                'namespace': self.namespace(),
+                'method': 'POST',
+                'base': self.base,
+                'href': href,
+                'params': params
+            })
+    '''
+
 
     def form(self, **kwargs):
         """
@@ -495,7 +593,3 @@ class PageProcessor(Singleton):
         img[0].set('src',url)
         return img
 
-
-class PortletUrl():
-    def __init__(self,*args,**kwargs):
-        pass

@@ -28,7 +28,7 @@ class PortletURLTestCase(TestCase):
         location = 'http://testserver:80/page/1'
         query = parse_qs(location)
         render_url = PortletURL.render_url(
-            location = location,
+            location = urlparse(location),
             query = query,
             namespace = namespace,
             href = href,
@@ -47,7 +47,7 @@ class PortletURLTestCase(TestCase):
         location = 'http://testserver:80/page/1'
         query = parse_qs(location)
         render_url = PortletURL.render_url(
-            location = location,
+            location = urlparse(location),
             query = query,
             namespace = namespace,
             href = href,
@@ -72,7 +72,7 @@ class PortletURLTestCase(TestCase):
         location = 'http://testserver:80/page/1'
         query = parse_qs(location)
         pu = PortletURL.render_url(
-            location = location,
+            location = urlparse(location),
             query = query,
             namespace = namespace,
             href = href,
