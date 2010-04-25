@@ -27,6 +27,24 @@ from posixpath import normpath
 from copy import copy
 
 
+class PortletPreferences(models.Model):
+    """ A portlet instance for the user, who has set specific preferences.
+    """
+    portletid        = models.IntegerField()
+
+    def __init__(self, portlet, *args, **kwargs):
+        self.portlet   = portlet
+        self.portletid = portlet.id
+
+    def elem(self):
+        elem = etree.Element("portlet-preferences")
+        elem.set('portletid', '%s' % (self.portletid))
+        return elem
+
+    def tag(self):
+        return etree.tostring(self.elem())
+
+
 class PortletURL():
     def __init__(self, location, query, *args, **kwargs):
         """ Not to be initialized manually. Use static functions.
@@ -151,12 +169,13 @@ class Marionet(Portlet):
         #    self.session_secret = kwargs['session_secret']
         #    del kwargs['session_secret']
         Portlet.__init__(self, *args, **kwargs)
-        log.info("Marionet '%s' version %s" % (self.title,self.VERSION))
+        log.info("Marionet (v%s) '%s', id %s" % (self.VERSION,self.title,self.id))
         self.session = etree.Element("portlet")
+        self.session.set('id', '%s' % (self.id))
         _url = urlparse(self.url)
         self.session.set('base',
             '%s://%s' % (_url.scheme, _url.netloc))
-        log.debug(etree.tostring(self.session))
+        #log.debug(etree.tostring(self.session))
 
     def __unicode__(self):
         return self.url

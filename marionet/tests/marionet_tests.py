@@ -36,7 +36,7 @@ class MarionetTestCase(TestCase):
         self.junit_url = self.junit_base + '/caterpillar/test_bench/junit'
         #self.session_secret='xxx'
 
-    #'''
+    '''
 
     def test_create(self):
         """ Database object creation
@@ -183,8 +183,6 @@ class MarionetTestCase(TestCase):
 #        self.assert_(link)
         """
 
-    #'''
-
     def __test_render_url(self):
         pass
 
@@ -228,6 +226,18 @@ class MarionetTestCase(TestCase):
 
         out = portlet.render(request)
         self.assertEqual(portlet.url, href)
+
+    #'''
+
+    def test_preferences(self):
+        portlet = Marionet.objects.create(url = self.junit_url)
+        pref = PortletPreferences(portlet)
+        self.assert_(pref)
+        elem = pref.elem()
+        self.assertEqual(elem.__class__, lxml.etree._Element)
+        self.assertEqual(elem.get('portletid'), str(portlet.id))
+        self.assert_(pref.tag())
+
 
     ''' secret is not used yet
     def test_secret(self):
