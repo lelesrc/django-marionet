@@ -322,7 +322,7 @@ class MarionetTestCase(TestCase):
         response = c.get('/test_bench/')
         self.assertEqual(response.status_code, 200)
         soup = BeautifulSoup(response.content)
-        print soup.html
+        #print soup.html
 
     def test_xhr(self):
         return
@@ -330,7 +330,7 @@ class MarionetTestCase(TestCase):
         response = c.post("http://example.com",
             {'foo': 'bar'},
             **{'HTTP_X_REQUESTED_WITH': 'XMLHttpRequest'})
-        print response
+        #print response
 
 
     ''' secret is not used yet

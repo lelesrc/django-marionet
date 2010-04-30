@@ -119,12 +119,12 @@ class PortletURL():
     @staticmethod
     def action_url(*args):
         ''' UNIMPLEMENTED '''
-        pass
+        raise NotImplemented
 
     @staticmethod
     def resource_url(*args):
         ''' UNIMPLEMENTED '''
-        pass
+        raise NotImplemented
 
 
 class PortletFilter():
@@ -141,10 +141,9 @@ class PortletFilter():
             """ Prepares the portlet by preprocessed context
             """ 
             log.debug(' * * * render filter activated')
-            #log.debug(portlet.url)
-            #log.debug(portlet.base)
-            #log.debug(context['GET'])
-            
+            #
+            ### href
+            #
             href_key = '%s_href' % (portlet.session.get('namespace'))
             #log.debug(href_key)
             query = context.get('query')
@@ -153,9 +152,7 @@ class PortletFilter():
                     href = query.__getitem__(href_key)
                     #log.debug('portlet href: %s' % (href))
                     # rewrite url
-                    print portlet.session
                     base = portlet.session.get('baseURL')
-                    print base
                     url = PageProcessor.href(None,href,base)
                     log.debug('new url: %s' % (url))
                     # update portlet
@@ -183,7 +180,7 @@ class Marionet(Portlet):
 
     def __init__(self, *args, **kwargs):
         kwargs['session_callback'] = Marionet.session_callback
-        print kwargs
+        #log.debug('initializing marionet: '+str(kwargs))
         super(Marionet, self).__init__(
             *args,
             **kwargs
@@ -396,7 +393,7 @@ class PageProcessor(Singleton):
 
     <xsl:variable
         name="base"
-        select="//*[local-name()='head']/portlet-session/@base" />
+        select="//*[local-name()='head']/portlet-session/@baseURL" />
 
 
     <!-- Fetch some info from head, and all of body -->
@@ -424,7 +421,7 @@ class PageProcessor(Singleton):
     </xsl:template>
 
     <!-- Convert link tags in head to style tags -->
-    <xsl:template match="/html/head/link">
+    <xsl:template match="*[local-name()='html']/head/link">
         <style type="text/css" id="{@id}">
         @import "<xsl:value-of select="marionet:href(string(@href),string($base))"/>";
         </style>
@@ -486,7 +483,7 @@ class PageProcessor(Singleton):
         if head_base is not None:
             base = head_base.get('href')
             log.debug('found head base %s' % (base))
-            portlet.session.set('base', base)
+            portlet.session.set('baseURL', base)
         #
         # get xmlns
         #
