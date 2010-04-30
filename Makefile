@@ -4,6 +4,9 @@ test: syncdb
 syncdb:
 	PYTHONPATH=`pwd` DJANGO_SETTINGS_MODULE=test.settings django-admin.py syncdb
 
+sql:
+	PYTHONPATH=`pwd` DJANGO_SETTINGS_MODULE=test.settings django-admin.py sql marionet portlets
+
 runserver: syncdb
 	PYTHONPATH=`pwd` DJANGO_SETTINGS_MODULE=test.settings django-admin.py runserver
 
