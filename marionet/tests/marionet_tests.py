@@ -6,52 +6,105 @@ from django.contrib.flatpages.models import FlatPage
 from django.db import IntegrityError
 from django.template import RequestContext
 from django.test import TestCase
+from django.test.client import Client
 
-# reviews imports
+# django-portlets imports
 from portlets.models import PortletAssignment
 from portlets.models import PortletBlocking
 from portlets.models import PortletRegistration
 from portlets.models import Slot
+from portlets.models import PortletSession
 import portlets.utils
 
-from urlparse import urlparse, urlunparse, urlunsplit, urljoin
-from urllib import quote, unquote
-from BeautifulSoup import BeautifulSoup
-
 from marionet import log
+from marionet import context_processors
 from marionet.models import *
 from marionet.tests.utils import RequestFactory
 from test.settings import TEST_LOG_LEVEL
 log.setlevel(TEST_LOG_LEVEL)
 
-#import inspect
-#import libxml2
-#from copy import copy
+from urlparse import urlparse, urlunparse, urlunsplit, urljoin
+from urllib import quote, unquote
+from BeautifulSoup import BeautifulSoup
 
 
 class MarionetTestCase(TestCase):
+    """ XXX: if the url is given in POST parameters, create a PortletSession
+    that will persist between requests.
+    
+    If the session is initialized without a Portlet (=> or Marionet) instance,
+    a temporary one is created but not stored to the database.
+    
+    It is also possible to display a portlet without a session. This affects the
+    portlet namespace and behavious, however. In Liferay this is called portlet
+    "instanciablity".
+    
+    * TEST TEST TEST
+    
+    """
 
     def setUp(self):
         self.junit_base = 'http://localhost:3000'
         self.junit_url = self.junit_base + '/caterpillar/test_bench/junit'
-        #self.session_secret='xxx'
 
-    '''
 
     def test_create(self):
         """ Database object creation
         """
+        portlet = Marionet(
+            url = self.junit_url,
+            title = 'test portlet'
+            )
+        self.assert_(portlet)
+        self.assert_(portlet.session)
+        session = portlet.session
+        del(portlet)
+
+        # create portlet for this session
+        portlet = Marionet.objects.create(session=session)
+        self.assert_(portlet)
+        self.assert_(portlet.session)
+        self.assertEqual(portlet.session.id,session.id)
+        self.assertEqual(portlet.url, self.junit_url)
+        self.assertEqual(portlet.title, 'test portlet')
+        self.assertEqual(portlet.session.get('baseURL'), self.junit_base)
+        del(portlet)
+
+        # create a new session
         portlet = Marionet.objects.create(
             url = self.junit_url,
             title = 'test portlet'
             )
         self.assert_(portlet)
-        _portlet = Marionet.objects.get(id=portlet.id)
-        self.assert_(_portlet)
-        self.assertEqual(_portlet,portlet)
-        self.assertEqual(_portlet.url, self.junit_url)
-        self.assertEqual(_portlet.title, 'test portlet')
-        self.assertEqual(_portlet.session.get('base'), self.junit_base)
+        self.assert_(portlet.session)
+        self.assertNotEqual(portlet.session.id,session.id) # ! different session
+        self.assertEqual(portlet.url, self.junit_url)
+        self.assertEqual(portlet.title, 'test portlet')
+        self.assertEqual(portlet.session.get('baseURL'), self.junit_base)
+        session_id = portlet.session.id
+        portlet_id = portlet.id
+        portlet.session.set('title', 'foobar')
+        del(portlet)
+
+        # check session
+        portlet = Marionet.objects.get(id=portlet_id)
+        self.assert_(portlet)
+
+    def test_render_context_processor(self):
+        """ Context preprocessor
+        """
+        path = '/page/1'
+        request = RequestFactory().get(path)
+        context = RequestContext(request)
+        # render to call context preprocessor
+        portlet = Marionet.objects.create(url=self.junit_url)
+        portlet.render(context)
+
+        location = context.get('location')
+        self.assert_(location)
+        self.assertEqual(location.scheme, 'http')
+        self.assertEqual(location.netloc, 'testserver:80')
+        self.assertEqual(location.path, path)
 
     def test_render(self):
         """ Basic GET
@@ -60,44 +113,41 @@ class MarionetTestCase(TestCase):
         portlet = Marionet.objects.create(url=url,title='junit index')
         self.assert_(portlet)
         self.assertEqual(portlet.id,1)
-        self.assertEqual(portlet.namespace(),'__portlet_1__')
+        session_name = portlet.session.name
+        self.assert_(portlet.session)
 
         path = '/page/1'
         request = RequestFactory().get(path)
-        out = portlet.render(request)
-        self.assert_(out)
-        self.assert_(portlet.context)
-        self.assertNotEqual(portlet.session, None)
-        self.assertEqual(portlet.context.get('location').path, path)
+        context = RequestContext(request)
+
+        out = portlet.render(context)
+
         self.assertEqual(portlet.url, url)
         self.assertEqual(portlet.title, 'junit index')
 
         soup = BeautifulSoup(str(out))
         self.assert_(soup)
+        #print soup
         # only body remains
         self.assertEqual(soup.find().name, 'div')
         self.assertEqual(soup.find('head'), None)
         # namespace is correct
-        portlet_div = soup.find(id='%s_body' % portlet.namespace())
+        portlet_div = soup.find(id='%s_body' % portlet.session.get('namespace'))
         self.assert_(portlet_div)
 
     def __test_target1(self,portlet,href):
         query = {
-            '%s_href' % (portlet.namespace()): href
+            '%s_href' % (portlet.session.get('namespace')): href
         }
         path = '/page/1'
         request = RequestFactory().get(path, query)
-        """
-        ctx = RequestContext(request)
-        ctx['path'] = request.path
-        ctx['GET'] = request.GET
-        """
-        out = portlet.render(request)
+        context = RequestContext(request, [context_processors.render_ctx])
+
+        out = portlet.render(context)
         self.assert_(out)
-        self.assert_(portlet.context)
-        self.assertEqual(portlet.context.get('location').path, path)
-        self.assertEqual(portlet.url, 
-            self.junit_base+'/caterpillar/test_bench/junit/target1')
+        #self.assert_(portlet.context)
+        self.assertEqual(context.get('location').path, path)
+        self.assertEqual(portlet.url,self.junit_base+'/caterpillar/test_bench/junit/target1')
 
         soup = BeautifulSoup(str(out))
         self.assert_(soup)
@@ -105,7 +155,7 @@ class MarionetTestCase(TestCase):
         self.assertEqual(soup.find().name, 'div')
         self.assertEqual(soup.find('head'), None)
         # namespace is correct
-        portlet_div = soup.find(id='%s_body' % portlet.namespace())
+        portlet_div = soup.find(id='%s_body' % portlet.session.get('namespace'))
         self.assert_(portlet_div)
         link = portlet_div.find('a')
         self.assert_(link)
@@ -131,16 +181,15 @@ class MarionetTestCase(TestCase):
         """
         portlet = Marionet.objects.create(
             url=self.junit_url, title='junit index')
-        portlet.session.set('base', self.junit_url) 
+        portlet.session.set('baseURL', self.junit_url) 
         href = 'target1'
         self.__test_target1(portlet,href)
 
         portlet = Marionet.objects.create(
             url=self.junit_url+'/', title='junit index')
-        portlet.session.set('base', self.junit_url) 
+        portlet.session.set('baseURL', self.junit_url) 
         href = 'target1'
         self.__test_target1(portlet,href)
-
 
     def test_http_post(self):
         """
@@ -149,7 +198,7 @@ class MarionetTestCase(TestCase):
         
         # POST to the same url
         href = url
-        portlet_url_query = '%s_href=%s' % (portlet.namespace(), 
+        portlet_url_query = '%s_href=%s' % (portlet.session.get('namespace')), 
             quote(href.encode('utf8'))
             )
         path = '/page/1' + '?' + portlet_url_query
@@ -173,7 +222,7 @@ class MarionetTestCase(TestCase):
         self.assertEqual(soup.find().name, 'div')
         self.assertEqual(soup.find('head'), None)
         # namespace is correct
-        portlet_div = soup.find(id='%s_body' % portlet.namespace())
+        portlet_div = soup.find(id='%s_body' % portlet.session.get('namespace'))
         self.assert_(portlet_div)
         print portlet_div
         msg = portlet_div.find(id='post_msg')
@@ -190,11 +239,12 @@ class MarionetTestCase(TestCase):
         path = '/page/1'
         request = RequestFactory().get(path)
         portlet_url = self.junit_url
-
         portlet = Marionet.objects.create(url=portlet_url)
-        # give portlet the context
-        portlet.render(request)
-        render_url = portlet.render_url(None)
+
+        context = RequestContext(request, [context_processors.render_ctx])
+        # render portlet with the context
+        portlet.render(context)
+        render_url = portlet.render_url(href=None)
         self.assertEqual(render_url(), 'http://testserver:80/page/1')
 
     def test_portlet_url__get1(self):
@@ -202,41 +252,85 @@ class MarionetTestCase(TestCase):
         """
         path = '/page/1'
         request = RequestFactory().get(path)
+        context = RequestContext(request, [context_processors.render_ctx])
         portlet_url = self.junit_url
         href = portlet_url + '/target1'
-
         portlet = Marionet.objects.create(url=portlet_url)
+
         # give portlet the context
-        portlet.render(request)
+        portlet.render(context)
         # ..now we have the render url
         render_url = portlet.render_url(href)
 
         # render
         _url = render_url()
+        #print _url
         request = RequestFactory().get(_url)
+        context = RequestContext(request, [context_processors.render_ctx])
 
         qs = request.META['QUERY_STRING']
+        #print qs
         self.assert_(
             re.match(
-                portlet.namespace(),
+                portlet.session.get('namespace'),
                 qs
                 ),
             '%s has no portlet namespace' % (qs)
             )
 
-        out = portlet.render(request)
+        out = portlet.render(context)
         self.assertEqual(portlet.url, href)
-
-    #'''
 
     def test_preferences(self):
         portlet = Marionet.objects.create(url = self.junit_url)
-        pref = PortletPreferences(portlet)
+        pref = PortletPreferences.objects.create(portlet=portlet)
         self.assert_(pref)
         elem = pref.elem()
         self.assertEqual(elem.__class__, lxml.etree._Element)
-        self.assertEqual(elem.get('portletid'), str(portlet.id))
+        self.assertEqual(elem.get('portlet_id'),
+            str(portlet.id))
+        self.assertEqual(elem.get('instance_id'),
+            '1_INSTANCE_1')
         self.assert_(pref.tag())
+        #print pref.portlet
+
+    def test_marionet_session1(self):
+        """ PortletSession callback
+        """
+        session = PortletSession.objects.create(
+            url = self.junit_url,
+            session_callback=Marionet.session_callback)
+
+        self.assert_(session)
+        self.assertEqual(session.get('url'), self.junit_url)
+        self.assertEqual(session.get('namespace'), '__portlet_%s__' % session.name)
+        self.assertEqual(session.get('baseURL'), self.junit_base)
+
+        portlet = Marionet.objects.create(url = self.junit_url)
+        self.assert_(portlet)
+        self.assert_(portlet.session)
+        self.assertEqual(portlet.session.get('url'), self.junit_url)
+        self.assertEqual(portlet.session.get('namespace'), '__portlet_%s__' % portlet.session.name)
+        self.assertEqual(portlet.session.get('baseURL'), self.junit_base)
+
+
+    def test_view(self):
+        c = Client()
+        #response = c.post('/login/', {'username': 'john', 'password': 'smith'})
+        #print response.status_code
+
+        response = c.get('/test_bench/')
+        self.assertEqual(response.status_code, 200)
+        soup = BeautifulSoup(response.content)
+        print soup.html
+
+    def test_xhr(self):
+        return
+        c = Client()
+        response = c.post("http://example.com",
+            {'foo': 'bar'},
+            **{'HTTP_X_REQUESTED_WITH': 'XMLHttpRequest'})
+        print response
 
 
     ''' secret is not used yet

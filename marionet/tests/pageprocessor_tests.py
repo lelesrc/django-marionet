@@ -14,10 +14,6 @@ from BeautifulSoup import BeautifulSoup
 import re
 from urlparse import urljoin
 
-import inspect
-#import libxml2
-#from copy import copy
-
 
 class ResponseMock():
     def __init__(self,body,head=None):
@@ -33,7 +29,6 @@ class PageProcessorTestCase(TestCase):
         self.junit_base = 'http://localhost:3000'
         self.junit_url = self.junit_base + '/caterpillar/test_bench/junit'
 
-    #"""
 
     def test_transform(self):
         ''' Basic body transformation
@@ -56,7 +51,7 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual('div', soup.find().name)
         self.assertEqual(None, soup.find('head'))
         # namespace is correct
-        portlet_div = soup.find(id='%s_body' % portlet.namespace())
+        portlet_div = soup.find(id='%s_body' % portlet.session.get('namespace'))
         self.assert_(portlet_div)
 
     def test_parse_tree(self):
@@ -74,10 +69,10 @@ class PageProcessorTestCase(TestCase):
         # trigger side effects!
         tree = PageProcessor.append_metadata(tree,portlet)
         #
-        portlet_tag = tree.find('//head/portlet')
+        portlet_tag = tree.find('//head/portlet-session')
         self.assertEqual(portlet_tag.__class__, etree._Element)
-        self.assertEqual(portlet_tag.get('namespace'), portlet.namespace())
-        self.assertEqual(portlet_tag.get('base'), self.junit_base)
+        self.assertEqual(portlet_tag.get('namespace'), portlet.session.get('namespace'))
+        self.assertEqual(portlet_tag.get('baseURL'), self.junit_base)
 
     def test_bench_tree(self):
         ''' Portlet test bench index
@@ -94,10 +89,10 @@ class PageProcessorTestCase(TestCase):
         # trigger side effects!
         tree = PageProcessor.append_metadata(tree,portlet)
         #
-        portlet_tag = tree.find('//html/head/portlet')
+        portlet_tag = tree.find('//html/head/portlet-session')
         self.assertEqual(portlet_tag.__class__, etree._Element)
-        self.assertEqual(portlet_tag.get('namespace'), portlet.namespace())
-        self.assertEqual(portlet_tag.get('base'), self.junit_base)
+        self.assertEqual(portlet_tag.get('namespace'), portlet.session.get('namespace'))
+        self.assertEqual(portlet_tag.get('baseURL'), self.junit_base)
 
     def test_parse_empty_tree(self):
         ''' Empty tree parse
@@ -114,10 +109,10 @@ class PageProcessorTestCase(TestCase):
         # trigger side effects!
         tree = PageProcessor.append_metadata(tree,portlet)
         #
-        portlet_tag = tree.find('//html/head/portlet')
+        portlet_tag = tree.find('head/portlet-session')
         self.assertEqual(portlet_tag.__class__, etree._Element)
-        self.assertEqual(portlet_tag.get('namespace'), portlet.namespace())
-        self.assertEqual(portlet_tag.get('base'), self.junit_base)
+        self.assertEqual(portlet_tag.get('namespace'), portlet.session.get('namespace'))
+        self.assertEqual(portlet_tag.get('baseURL'), self.junit_base)
 
     def test_process(self):
         ''' Portlet processing chain
@@ -138,7 +133,7 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual('div', soup.find().name)
         self.assertEqual(None, soup.find('head'))
         # namespace is correct
-        portlet_div = soup.find(id='%s_body' % portlet.namespace())
+        portlet_div = soup.find(id='%s_body' % portlet.session.get('namespace'))
         self.assert_(portlet_div)
 
     def test_title_ok(self):
@@ -182,7 +177,6 @@ class PageProcessorTestCase(TestCase):
         self.assert_(response)
         (out,meta) = PageProcessor.process(response,portlet)
         self.assert_(out)
-        #self.assert_(meta)
         self.assertEqual('',portlet.title)
 
         soup = BeautifulSoup(str(out))
@@ -291,7 +285,7 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual('div', soup.find().name)
         self.assertEqual(None, soup.find('head'))
         # namespace is correct
-        portlet_div = soup.find(id='%s_body' % portlet.namespace())
+        portlet_div = soup.find(id='%s_body' % portlet.session.get('namespace'))
         self.assert_(portlet_div)
 
         # title + content are correct
@@ -332,8 +326,6 @@ class PageProcessorTestCase(TestCase):
         ''' HTML 5
         '''
         self.__test_doctype('html5')
-
-    #"""
 
     """ xslt does not handle this
 

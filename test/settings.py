@@ -11,6 +11,7 @@ unit tests in two places:
       subclass of ``unittest.TestCase`` in this module.
 """
 import os
+import django.conf.global_settings as DEFAULT_SETTINGS
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
@@ -52,3 +53,6 @@ TEMPLATE_DIRS = (
     os.path.join(os.path.abspath(os.path.dirname(__file__)), 'portal', 'templates'),
     )
 SITE_ID = 1
+TEMPLATE_CONTEXT_PROCESSORS = DEFAULT_SETTINGS.TEMPLATE_CONTEXT_PROCESSORS + (
+    'marionet.context_processors.render_ctx',
+)

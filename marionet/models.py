@@ -8,8 +8,10 @@ from django.db import models
 from django.template import RequestContext
 from django.template.loader import render_to_string
 
-from portlets.models import Portlet
+from portlets.models import Portlet, PortletRegistration
 from portlets.utils import register_portlet
+
+from portlets.models import PortletSession
 
 from marionet import log, Config
 
@@ -29,16 +31,17 @@ from copy import copy
 
 class PortletPreferences(models.Model):
     """ A portlet instance for the user, who has set specific preferences.
+        XXX: is this really needed?
     """
-    portletid        = models.IntegerField()
+    portlet = models.ForeignKey('Marionet')
 
-    def __init__(self, portlet, *args, **kwargs):
-        self.portlet   = portlet
-        self.portletid = portlet.id
+    def instance_id(self):
+        return '%s_INSTANCE_%s' % (self.portlet.id, self.id)
 
     def elem(self):
         elem = etree.Element("portlet-preferences")
-        elem.set('portletid', '%s' % (self.portletid))
+        elem.set('portlet_id', '%s' % (self.portlet.id))
+        elem.set('instance_id', '%s' % (self.instance_id()))
         return elem
 
     def tag(self):
@@ -46,6 +49,10 @@ class PortletPreferences(models.Model):
 
 
 class PortletURL():
+    """
+    Liferay example:
+    http://example.com/web/some-group/some-page?p_p_id=wb_profile_INSTANCE_ciio&p_p_lifecycle=1&p_p_state=normal&p_p_mode=view&p_p_col_id=column-2&p_p_col_count=2
+    """
     def __init__(self, location, query, *args, **kwargs):
         """ Not to be initialized manually. Use static functions.
         """
@@ -58,22 +65,40 @@ class PortletURL():
     def __unicode__(self):
         """ "tostring"
         """
-        qs = "&".join(map(lambda (k,v): '%s=%s' % (
-            k,quote(v.encode('utf8'))),
-            self.query.items()))
-        return urlunsplit((
-            self.location.scheme,
-            self.location.netloc,
-            self.location.path,
-            qs,
-            ''
-            ))
+        if self.query is None:
+            qs = ''
+        else:
+            qs = "&".join(map(lambda (k,v): '%s=%s' % (
+                k,quote(v.encode('utf8'))),
+                self.query.items()))
+        if self.location is None:
+            log.warn('portlet context has no location')
+            url = '?'+qs
+        else:
+            url = urlunsplit((
+                self.location.scheme,
+                self.location.netloc,
+                self.location.path,
+                qs,
+                ''
+                ))
+        return url
 
     @staticmethod
-    def render_url(location, query={}, namespace=None, href=None, base=None, params={}, method='GET'):
-        """ 
+    def render_url(
+        location,
+        query,
+        namespace=None,
+        href=None,
+        base=None,
+        params={},
+        method='GET'
+        ):
+        """ location = ParseResult
+            query = QueryDict
         """
         log.debug('portlet href: %s' % (href))
+        log.debug(location)
         if href is None:
             return PortletURL(location, query)
 
@@ -82,10 +107,14 @@ class PortletURL():
             href = PageProcessor.href(None,href,base)
 
         # append portlet parameters to query
-        log.debug('context query: %s' % (query))
-        query[namespace+'_href'] = href
+        # - since query is immutable, create a copy if needed
+        _query = query
+        log.debug('context query: %s' % (_query))
+        if namespace is not None:
+            _query = copy(query)
+            _query.__setitem__(namespace+'_href', href)
 
-        return PortletURL(location, query)
+        return PortletURL(location, _query)
 
     @staticmethod
     def action_url(*args):
@@ -108,38 +137,35 @@ class PortletFilter():
         If the context url contains a new href for this portlet
         instance, the portlet.url is updated.
         """
-        def do_filter(portlet, request, context=None):
+        def do_filter(portlet, context):
+            """ Prepares the portlet by preprocessed context
+            """ 
             log.debug(' * * * render filter activated')
             #log.debug(portlet.url)
             #log.debug(portlet.base)
             #log.debug(context['GET'])
-            if not context:
-                context = RequestContext(request)
-            context['location'] = ParseResult(
-                'http',
-                '%s:%s' % (request.META['SERVER_NAME'], request.META['SERVER_PORT']),
-                request.path,
-                '',
-                request.META['QUERY_STRING'],
-                ''
-                )
-            context['query'] = parse_qs(context.get('location').query)
-            context['GET'] = request.GET
-            #log.debug(context['query'])
-
-            href_key = '%s_href' % (portlet.namespace())
+            
+            href_key = '%s_href' % (portlet.session.get('namespace'))
             #log.debug(href_key)
-            if context['GET'].__contains__(href_key):
-                href = context['GET'].__getitem__(href_key)
-                log.debug('portlet href: %s' % (href))
-                # rewrite url
-                url = PageProcessor.href(None,href,portlet.session.get('base'))
-                log.debug('new url: %s' % (url))
-                # update portlet
-                portlet.url = unquote(url)
+            query = context.get('query')
+            if query:
+                if query.__contains__(href_key):
+                    href = query.__getitem__(href_key)
+                    #log.debug('portlet href: %s' % (href))
+                    # rewrite url
+                    print portlet.session
+                    base = portlet.session.get('baseURL')
+                    print base
+                    url = PageProcessor.href(None,href,base)
+                    log.debug('new url: %s' % (url))
+                    # update portlet
+                    portlet.url = unquote(url)
+                else:
+                    log.debug('no href key')
             else:
-                log.debug('no href key')
-            return view_func(portlet,request,context)
+                log.debug('no query parameters')
+
+            return view_func(portlet,context)
 
         do_filter.__name__ = view_func.__name__
         do_filter.__dict__ = view_func.__dict__
@@ -149,42 +175,44 @@ class PortletFilter():
 
 
 class Marionet(Portlet):
-    """ This is still a mess.
+    """ A new session is always created.
     """
     VERSION = '0.0.1'
 
-    url        = models.TextField(u"url",        blank=True)
-    req_method = models.TextField(u"req_method", blank=True)
-    referer    = models.TextField(u"referer",    blank=True)
+    url = None
 
-    # session values
-    session = None
-    base = None
-
-    # session secret for security given at init, not stored to DB
-    #session_secret = None
-    
     def __init__(self, *args, **kwargs):
-        #if 'session_secret' in kwargs:
-        #    self.session_secret = kwargs['session_secret']
-        #    del kwargs['session_secret']
-        Portlet.__init__(self, *args, **kwargs)
-        log.info("Marionet (v%s) '%s', id %s" % (self.VERSION,self.title,self.id))
-        self.session = etree.Element("portlet")
-        self.session.set('id', '%s' % (self.id))
-        _url = urlparse(self.url)
-        self.session.set('base',
-            '%s://%s' % (_url.scheme, _url.netloc))
-        #log.debug(etree.tostring(self.session))
+        kwargs['session_callback'] = Marionet.session_callback
+        print kwargs
+        super(Marionet, self).__init__(
+            *args,
+            **kwargs
+            )
+        self.url = self.session.get('url')
+        log.info("Marionet (v%s) '%s', id %s" % (self.VERSION,self.url,self.id))
+        log.debug(self.session)
 
     def __unicode__(self):
-        return self.url
+        return 'marionet_%s.%s' % (self.id, self.session.get('namespace'))
 
-    def namespace(self):
-        return '__portlet_%s__' % (self.id)
+    @staticmethod
+    def session_callback(session,*args):
+        """ Called at session initialization.
+            @returns a dict.
+        """
+        __dict = {}
+
+        # MarionetSession
+        #
+        if session.get('baseURL') is None:
+            if session.get('url') is not None:
+                _url = urlparse(session.get('url'))
+                __dict['baseURL'] = '%s://%s' % (_url.scheme, _url.netloc)
+            # else do not set base
+        return __dict
 
     @PortletFilter.render_filter
-    def render(self, request, context):
+    def render(self, context):
         """ Render GET.
 
             This method has side effects; the self.title is set only
@@ -194,13 +222,12 @@ class Marionet(Portlet):
         """
         log.info(" * * * render * "+self.url)
         #log.debug('context: %s' % (context))
-        #log.debug('context path: %s' % (context['path']))
         try:
             client = WebClient()
             # this is the response from the remote server
             response = client.get(self.url)
             # process the response in this portlet context with this sheet
-            self.context = copy(context)
+            self.context = context
             (out,meta) = PageProcessor.process(response,self,sheet='body')
             log.info('title: '+self.title)
             log.info('Page length: %i bytes' % (len(out)))
@@ -210,32 +237,24 @@ class Marionet(Portlet):
             return "ERROR"
 
     def render_url(self, href, params={}):
-        """ Calls the function with portlet state parameters.
+        """ Returns a PortletURL.render_url.
+            Call the result object to get string representation of the url.
         """
+        log.debug(self.session)
         return PortletURL.render_url(
-            location = self.context.get('location'),
-            query = self.context.get('query'),
-            href = href,
-            params = params,
-            namespace = self.namespace(),
-            method = 'GET',
-            base = self.base,
+            method    = 'GET',
+            location  = self.context.get('location'),
+            query     = self.context.get('query'),
+            href      = href,
+            params    = params,
+            namespace = self.session.get('namespace'),
+            base      = self.session.get('base'),
             )
 
-    '''
     def action_url(self, href, params={}):
-        return PortletURL.action_url(
-            self.context,
-            {
-                'namespace': self.namespace(),
-                'method': 'POST',
-                'base': self.base,
-                'href': href,
-                'params': params
-            })
-    '''
-
-
+        ''' UNIMPLEMENTED '''
+        pass
+        
     def form(self, **kwargs):
         """
         """
@@ -303,6 +322,8 @@ class WebClient():
         method = httpclient.GetMethod(url)
         # add cookies
         method.add_request_header('Cookie',self.cookie_headers())
+        if referer is not None:
+            method.add_request_header('Referer',referer)
         #log.debug(method.getheaders())
         method.execute()
         response = method.get_response()
@@ -371,11 +392,11 @@ class PageProcessor(Singleton):
 
     <xsl:variable
         name="namespace"
-        select="//*[local-name()='head']/portlet/@namespace" />
+        select="//*[local-name()='head']/portlet-session/@namespace" />
 
     <xsl:variable
         name="base"
-        select="//*[local-name()='head']/portlet/@base" />
+        select="//*[local-name()='head']/portlet-session/@base" />
 
 
     <!-- Fetch some info from head, and all of body -->
@@ -447,12 +468,14 @@ class PageProcessor(Singleton):
 
     @staticmethod
     def append_metadata(root,portlet):
-        """ Alters both root and portlet.
+        """ Updates both root and portlet state.
 
-        ElementTree root is added a /html/head/portlet tag with portlet
-        metadata for the XSLT parser.
+        ElementTree root is added a /html/head/portlet-session from portlet.session._Element.
+        This is for XSLT parser to obtain local variables.
 
-        Marionet portlet.session is updated to reflect the data.
+        Marionet portlet.session is updated to reflect html metadata.
+        * session.base
+        * 
         """
         #
         # base url
@@ -465,50 +488,46 @@ class PageProcessor(Singleton):
             log.debug('found head base %s' % (base))
             portlet.session.set('base', base)
         #
-        # namespace
-        #
-        if portlet:
-            portlet.session.set('namespace', portlet.namespace())
-        #
         # get xmlns
         #
         m = re.search('{(.*)}', root.getroot().tag ) # hackish ..
         if m:
             xmlns = m.group(1)
-            log.debug('xmlns: '+xmlns)
+            #log.debug('xmlns: '+xmlns)
         else:
             xmlns = ''
         #
         # append
         #
         head = root.find('//{%s}head' % xmlns)
-        if head is not None:
-            head.append(portlet.session)
-            #
-            # get title for portlet object.
-            #
-            title = head.find('{%s}title' % xmlns)
-            if title is not None:
-                # strip leading and trailing non-word chars
-                portlet.title = re.sub(
-                    r'^\W+|\W+$','',
-                    title.text)
-            """
-            Get content_type and charset.
-            Not used so commented out.
-
-            _content = tree.findall('head/meta[@content]')
-            if _content:
-                (meta['content_type'],meta['charset']) = '; '.split(
-                    _content[0].attrib['content'])
-            """
-        else:
+        if head is None:
             log.warn('OOPS no head!')
+            head = etree.Element('head')
+            root.getroot().append(head)
+
+        head.append(portlet.session._Element)
+        #
+        # get title for portlet object.
+        #
+        title = head.find('{%s}title' % xmlns)
+        if title is not None:
+            # strip leading and trailing non-word chars
+            portlet.title = re.sub(
+                r'^\W+|\W+$','',
+                title.text)
+        """
+        Get content_type and charset.
+        Not used so commented out.
+
+        _content = tree.findall('head/meta[@content]')
+        if _content:
+            (meta['content_type'],meta['charset']) = '; '.split(
+                _content[0].attrib['content'])
+        """
 
         """
-        log.debug("portlet session: %s" % (etree.tostring(portlet.session)))
-        log.debug(' # spiced tree')
-        log.debug(etree.tostring(root))
+        log.debug(' # new head')
+        log.debug(etree.tostring(head))
         log.debug(' # # #')
         """
         return root
@@ -595,10 +614,9 @@ class PageProcessor(Singleton):
             """
             log.debug('relative path')
             join = urljoin(base+'/',href)
-            #log.debug(join)
-            img_url = re.sub('(?<!:)//', '/', join)
-            #log.debug(img_url)
-            return img_url
+            _url = re.sub('(?<!:)//', '/', join)
+            #log.debug(_url)
+            return _url
         else:
             log.warn('portlet has no base')
             return href

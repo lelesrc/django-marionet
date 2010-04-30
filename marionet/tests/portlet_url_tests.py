@@ -3,6 +3,7 @@
 
 # django imports
 from django.template import RequestContext
+from django.http import QueryDict
 from django.test import TestCase
 
 import portlets.utils
@@ -26,7 +27,7 @@ class PortletURLTestCase(TestCase):
         method = 'GET'
         namespace = '__portlet__'
         location = 'http://testserver:80/page/1'
-        query = parse_qs(location)
+        query = QueryDict('')
         render_url = PortletURL.render_url(
             location = urlparse(location),
             query = query,
@@ -45,7 +46,7 @@ class PortletURLTestCase(TestCase):
         method = 'GET'
         namespace = '__portlet__'
         location = 'http://testserver:80/page/1'
-        query = parse_qs(location)
+        query = QueryDict('')
         render_url = PortletURL.render_url(
             location = urlparse(location),
             query = query,
@@ -70,7 +71,7 @@ class PortletURLTestCase(TestCase):
         method = 'POST'
         namespace = '__portlet__'
         location = 'http://testserver:80/page/1'
-        query = parse_qs(location)
+        query = QueryDict('')
         pu = PortletURL.render_url(
             location = urlparse(location),
             query = query,
