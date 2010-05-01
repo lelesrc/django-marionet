@@ -30,32 +30,40 @@ from portlets.models import PortletBlocking
 from portlets.models import PortletRegistration
 from portlets.models import Slot
 
-from marionet.models import Marionet
+from marionet.models import Marionet, log
 
 def index(request):
     return HttpResponse("hello world")
 
-def marionet(request):
-    portlets = [
-        Marionet.objects.create(
-            url="http://www.flickr.com",
-            req_method='GET'
-            ),
-        Marionet.objects.create(
-            url="http://www.flickr.com/",
-            req_method='GET'
-            ),
-        Marionet.objects.create(
-            url="http://localhost:3000/caterpillar/test_bench"
-            ),
-        ]
-    return render_to_response("test_bench.html", {
-        "portlets" : portlets,
-        })
 
-def jquery_test(request):
-    return render_to_response("jquery_test.html", {})
+def test_bench(request):
+    portlet =  Marionet.objects.create(
+        url="http://localhost:3000/caterpillar/test_bench/",
+        )
+    log.debug(portlet)
+    return render_to_response("url.html", {
+        "portlet" : portlet,
+        },
+        context_instance=RequestContext(request))
 
-def ajax_generator(request):
-    portlet = Marionet()
-    return render_to_response("marionet/ajax_generator.html", {"portlet" : portlet})
+
+def test_bench_xhr(request):
+    """ Marionet XHR ping
+    """
+    '''
+    if request.is_ajax():
+        return HttpResponse("OK")
+    else:
+        return HttpResponse("FAIL", status=404)
+    '''
+    if not request.is_ajax():
+        return HttpResponse("FAIL", status=404)
+
+    portlet =  Marionet.objects.create(
+        url="http://localhost:3000/caterpillar/test_bench/junit/xhr_post",
+        )
+    log.debug(portlet)
+    return render_to_response("url.html", {
+        "portlet" : portlet,
+        },
+        context_instance=RequestContext(request))

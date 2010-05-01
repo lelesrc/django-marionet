@@ -1,10 +1,8 @@
-{% block marionet %}
-    <div class="marionet">
-        <div class="marionet_title">
-             {{ title }}
-        </div>
-        <div class="marionet_content">
-             {{ portlet|safe }}
-        </div>
+<div class="marionet">
+    <div class="marionet_title">
+         {{ title }}
     </div>
-{% endblock %}
+    <div class="marionet_content">
+         {{ content|safe }}
+    </div>
+</div>
