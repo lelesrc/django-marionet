@@ -32,10 +32,10 @@ def render_ctx(request):
     query = request.GET
     log.debug('query: ' + str(query))
     # bubbling...
-    log.debug('POST: '+str(request.POST))
+    #log.debug('POST: '+str(request.POST))
     #session = PortletSession() # XXX: match to USER?
     
     return {
-        'location': location,
-        'query': query,
+        'location': location, # ParseResult
+        'query': query, # QueryDict
     }

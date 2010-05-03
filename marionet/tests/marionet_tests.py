@@ -145,8 +145,10 @@ class MarionetTestCase(TestCase):
 
         out = portlet.render(context)
         self.assert_(out)
-        #self.assert_(portlet.context)
-        self.assertEqual(context.get('location').path, path)
+        location = portlet.session.get('location')
+        self.assert_(location)
+        loc = urlparse(location)
+        self.assertEqual(loc.path, path)
         self.assertEqual(portlet.url,self.junit_base+'/caterpillar/test_bench/junit/target1')
 
         soup = BeautifulSoup(str(out))
@@ -159,6 +161,7 @@ class MarionetTestCase(TestCase):
         self.assert_(portlet_div)
         link = portlet_div.find('a')
         self.assert_(link)
+        print link
 
     def test_portlet_url__absolute(self):
         """ Portlet URL with absolute url
@@ -312,6 +315,27 @@ class MarionetTestCase(TestCase):
         self.assertEqual(portlet.session.get('url'), self.junit_url)
         self.assertEqual(portlet.session.get('namespace'), '__portlet_%s__' % portlet.session.name)
         self.assertEqual(portlet.session.get('baseURL'), self.junit_base)
+
+    def test_marionet_session2(self):
+        """ Session location and query
+        """
+        query = {
+            'foo': 'bar'
+        }
+        path = '/page/1'
+        request = RequestFactory().get(path, query)
+        context = RequestContext(request, [context_processors.render_ctx])
+
+        portlet = Marionet.objects.create(url = self.junit_url)
+        location = portlet.session.get('location')
+        self.assertEqual(location,None)
+
+        out = portlet.render(context)
+
+        location = portlet.session.get('location')
+        self.assertEqual(location, 'http://testserver:80/page/1')
+        query = portlet.session.get('query')
+        self.assertEqual(query, 'foo=bar')
 
     def test_view(self):
         c = Client()

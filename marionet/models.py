@@ -184,20 +184,21 @@ class Marionet(Portlet):
             )
         self.url = self.session.get('url')
         log.info("Marionet (v%s) '%s', id %s" % (self.VERSION,self.url,self.id))
-        log.debug(self.session)
+        #log.debug(self.session)
 
     def __unicode__(self):
         return 'marionet_%s.%s' % (self.id, self.session.get('namespace'))
 
     @staticmethod
-    def session_callback(session,*args):
+    def session_callback(session):
         """ Called at session initialization.
-            @returns a dict.
+            @returns a dict to be appended to session.
         """
         __dict = {}
 
         # MarionetSession
         #
+        # baseURL
         if session.get('baseURL') is None:
             if session.get('url') is not None:
                 _url = urlparse(session.get('url'))
@@ -216,6 +217,18 @@ class Marionet(Portlet):
         """
         log.info(" * * * render * "+self.url)
         #log.debug('context: %s' % (context))
+
+        ### update session
+        # context location
+        if context['location'] is not None:
+            self.session.set('location',
+                urlunparse(context['location']))
+        # context query
+        if context['query'] is not None:
+            self.session.set('query',
+                context['query'].urlencode())
+        log.debug(self.session)
+
         try:
             client = WebClient()
             # this is the response from the remote server
@@ -233,6 +246,7 @@ class Marionet(Portlet):
     def render_url(self, href, params={}):
         """ Returns a PortletURL.render_url.
             Call the result object to get string representation of the url.
+            XXX: is this needed?
         """
         log.debug(self.session)
         return PortletURL.render_url(
@@ -242,7 +256,6 @@ class Marionet(Portlet):
             href      = href,
             params    = params,
             namespace = self.session.get('namespace'),
-            base      = self.session.get('baseURL'),
             )
 
     def action_url(self, href, params={}):
@@ -384,6 +397,14 @@ class PageProcessor(Singleton):
     -->
 
     <xsl:variable
+        name="location"
+        select="//*[local-name()='head']/portlet-session/@location" />
+
+    <xsl:variable
+        name="query"
+        select="//*[local-name()='head']/portlet-session/@query" />
+
+    <xsl:variable
         name="namespace"
         select="//*[local-name()='head']/portlet-session/@namespace" />
 
@@ -407,7 +428,7 @@ class PageProcessor(Singleton):
 
     <!-- Rewrite links -->
     <xsl:template match="a">
-        <xsl:copy-of select="marionet:link(.,string($namespace),string($base))"/>
+        <xsl:copy-of select="marionet:link(.,string($location),string($query),string($namespace),string($base))"/>
     </xsl:template>
 
     <!-- Rewrite image references -->
@@ -566,7 +587,7 @@ class PageProcessor(Singleton):
     ### tag rewrites ###
 
     @staticmethod
-    def link(obj,location,query,anchor,namespace,base=None):
+    def link(obj,anchor,location,query,namespace,base=None):
         """ Ordinary hyperlink.
         
             TODO: test "javascript:" and "#"
