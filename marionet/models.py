@@ -168,12 +168,20 @@ class PortletFilter():
         return do_filter
 
 
+class MarionetSession(PortletSession):
+    portlet = models.ForeignKey('Marionet')
+    user_id = models.CharField(max_length=8,blank=True) # XXX
+
+    def __unicode__(self):
+        return 'session :>'
+
+
 class Marionet(Portlet):
     """ A new session is always created.
     """
     VERSION = '0.0.1'
 
-    url = None
+    url = models.CharField(null=True, max_length=256)
 
     def __init__(self, *args, **kwargs):
         kwargs['session_callback'] = Marionet.session_callback
@@ -182,12 +190,17 @@ class Marionet(Portlet):
             *args,
             **kwargs
             )
-        self.url = self.session.get('url')
-        log.info("Marionet (v%s) '%s', id %s" % (self.VERSION,self.url,self.id))
-        #log.debug(self.session)
+        if not self.url and self.session:
+            self.url = self.session.get('url')
+        log.info(self.__unicode__())
+        #log.info("Marionet %s: %s, session %s" % (self.id,self.url,self.session.name))
+        #log.info(self.session)
 
     def __unicode__(self):
-        return 'marionet_%s.%s' % (self.id, self.session.get('namespace'))
+        if self.session:
+            return 'marionet_%s.%s.%s' % (self.id, self.session.name, self.url)
+        else:
+            return 'marionet_%s.%s' % (self.id, self.url)
 
     @staticmethod
     def session_callback(session):
@@ -592,7 +605,7 @@ class PageProcessor(Singleton):
         
             TODO: test "javascript:" and "#"
         """
-        #log.debug('anchor: %s' % etree.tostring(anchor[0]))
+        log.debug('anchor: %s' % etree.tostring(anchor[0]))
 
         href = anchor[0].get('href')
         if not href:

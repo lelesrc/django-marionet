@@ -34,7 +34,7 @@ class PageProcessorTestCase(TestCase):
         ''' Basic body transformation
         '''
         url = self.junit_url+'/xslt_simple'
-        portlet = Marionet.objects.create(url=url)
+        portlet = Marionet.objects.create(url=url, session=True)
         client = WebClient()
         self.assert_(client)
         response = client.get(url)
@@ -58,7 +58,7 @@ class PageProcessorTestCase(TestCase):
         ''' HTML tree parse
         '''
         url = self.junit_url+'/xslt_simple'
-        portlet = Marionet.objects.create(url=url)
+        portlet = Marionet.objects.create(url=url, session=True)
         client = WebClient()
         self.assert_(client)
         response = client.get(url)
@@ -78,7 +78,7 @@ class PageProcessorTestCase(TestCase):
         ''' Portlet test bench index
         '''
         url = self.junit_base + '/caterpillar/test_bench'
-        portlet = Marionet.objects.create(url=url)
+        portlet = Marionet.objects.create(url=url, session=True)
         client = WebClient()
         self.assert_(client)
         response = client.get(url)
@@ -98,7 +98,7 @@ class PageProcessorTestCase(TestCase):
         ''' Empty tree parse
         '''
         url = self.junit_url+'/empty'
-        portlet = Marionet.objects.create(url=url)
+        portlet = Marionet.objects.create(url=url, session=True)
         client = WebClient()
         self.assert_(client)
         response = client.get(url)
@@ -118,7 +118,7 @@ class PageProcessorTestCase(TestCase):
         ''' Portlet processing chain
         '''
         url = self.junit_url+'/xslt_simple'
-        portlet = Marionet.objects.create(url=url)
+        portlet = Marionet.objects.create(url=url, session=True)
         client = WebClient()
         self.assert_(client)
         response = client.get(url)
@@ -139,7 +139,7 @@ class PageProcessorTestCase(TestCase):
     def test_title_ok(self):
         ''' Portlet title
         '''
-        portlet = Marionet()
+        portlet = Marionet(session=True)
         html = '''
 <html>
   <head>
@@ -166,7 +166,7 @@ class PageProcessorTestCase(TestCase):
     def test_title_bad(self):
         ''' Empty portlet title
         '''
-        portlet = Marionet()
+        portlet = Marionet(session=True)
         html = '''
 <html>
   <head>
@@ -189,7 +189,7 @@ class PageProcessorTestCase(TestCase):
         ''' Image url rewrite
         '''
         url = self.junit_url+'/basic_tags'
-        portlet = Marionet(url=url)
+        portlet = Marionet(url=url, session=True)
         client = WebClient()
         self.assert_(client)
         response = client.get(url)
@@ -219,7 +219,7 @@ class PageProcessorTestCase(TestCase):
         ''' CSS rewrite
         '''
         url = self.junit_url+'/css'
-        portlet = Marionet(url=url)
+        portlet = Marionet(url=url, session=True)
         client = WebClient()
         self.assert_(client)
         response = client.get(url)
@@ -257,7 +257,7 @@ class PageProcessorTestCase(TestCase):
         ''' Link rewrite
         '''
         url = self.junit_url+'/basic_tags'
-        portlet = Marionet.objects.create(url=url)
+        portlet = Marionet.objects.create(url=url, session=True)
         # get test data
         client = WebClient()
         self.assert_(client)
@@ -297,7 +297,7 @@ class PageProcessorTestCase(TestCase):
         '''
         url = self.junit_url+'/doctype_'+type
 
-        portlet = Marionet.objects.create(url=url)
+        portlet = Marionet.objects.create(url=url, session=True)
         client = WebClient()
         self.assert_(client)
         response = client.get(url)

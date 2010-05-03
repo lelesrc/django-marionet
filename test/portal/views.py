@@ -31,6 +31,7 @@ from portlets.models import PortletRegistration
 from portlets.models import Slot
 
 from marionet.models import Marionet, log
+from marionet.models import MarionetSession
 
 def index(request):
     return HttpResponse("hello world")
@@ -62,6 +63,18 @@ def test_bench_xhr(request):
     portlet =  Marionet.objects.create(
         url="http://localhost:3000/caterpillar/test_bench/junit/xhr_post",
         )
+    log.debug(portlet)
+    return render_to_response("url.html", {
+        "portlet" : portlet,
+        },
+        context_instance=RequestContext(request))
+
+
+def marionet(request,portlet_id):
+    """
+    """
+    portlet =  Marionet.objects.get(id=portlet_id)
+    portlet.session = MarionetSession()
     log.debug(portlet)
     return render_to_response("url.html", {
         "portlet" : portlet,

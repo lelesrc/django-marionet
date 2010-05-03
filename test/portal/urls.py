@@ -14,6 +14,9 @@ urlpatterns = patterns('',
     (r'^test_bench/xhr', 'test.portal.views.test_bench_xhr'),
     (r'^test_bench/', 'test.portal.views.test_bench'),
 
+    (r'^marionet/(?P<portlet_id>\d+)/', 'test.portal.views.marionet'),
+
+
     (r'^media/(.*)$', 'django.views.static.serve', {'document_root': MEDIA_ROOT}),
 )
 
