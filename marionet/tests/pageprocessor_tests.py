@@ -258,12 +258,39 @@ class PageProcessorTestCase(TestCase):
         '''
         url = self.junit_url+'/basic_tags'
         portlet = Marionet.objects.create(url=url)
+        # get test data
         client = WebClient()
         self.assert_(client)
         response = client.get(url)
         self.assertEqual(200, response.status)
+
+        portlet.session.set('location', 'http://example.com:8000/some-page')
         (out,meta) = PageProcessor.process(response,portlet)
-        # XXX: print out
+
+        soup = BeautifulSoup(out)
+        link = soup.find(id='anchor_absolute_url').find('a')
+        self.assertEqual(
+            'http://example.com:8000/some-page?__portlet_KgDEmu___href=http%3A//localhost%3A3000/caterpillar/test_bench',
+            link.get('href') 
+            )
+
+    def test_link(self):
+        # XSLT returns this form
+        location = 'http://example.com:8000/some-page'
+        query = ''
+        anchor = [etree.fromstring('<a href="/caterpillar/test_bench">Link text</a>')]
+        namespace = '__portlet__'
+        link = PageProcessor.link(None,
+            location,
+            query,
+            anchor,
+            namespace,
+            self.junit_base
+            )[0] # take 1st _Element
+        self.assertEqual(
+            link.get('href'),
+            'http://example.com:8000/some-page?__portlet___href=http%3A//localhost%3A3000/caterpillar/test_bench')
+        print etree.tostring(link)
 
     def __test_doctype(self,type):
         ''' Same test for different DOCTYPEs

@@ -5,6 +5,7 @@
 # django imports
 from django import forms
 from django.db import models
+from django.http import QueryDict
 from django.template import RequestContext
 from django.template.loader import render_to_string
 
@@ -90,7 +91,6 @@ class PortletURL():
         query,
         namespace=None,
         href=None,
-        base=None,
         params={},
         method='GET'
         ):
@@ -101,18 +101,15 @@ class PortletURL():
         log.debug(location)
         if href is None:
             return PortletURL(location, query)
-
-        if base is not None:
-            # rewrite url
-            href = PageProcessor.href(None,href,base)
+        if namespace is None:
+            log.warn('Portlet namespace is undefined')
+            return PortletURL(location, query)
 
         # append portlet parameters to query
         # - since query is immutable, create a copy if needed
-        _query = query
+        _query = copy(query)
         log.debug('context query: %s' % (_query))
-        if namespace is not None:
-            _query = copy(query)
-            _query.__setitem__(namespace+'_href', href)
+        _query.__setitem__(namespace+'_href', href)
 
         return PortletURL(location, _query)
 
@@ -245,7 +242,7 @@ class Marionet(Portlet):
             href      = href,
             params    = params,
             namespace = self.session.get('namespace'),
-            base      = self.session.get('base'),
+            base      = self.session.get('baseURL'),
             )
 
     def action_url(self, href, params={}):
@@ -351,7 +348,6 @@ class WebClient():
             return self.get(response.getheader('Location'))
         else:
             return response
-
 
 class PageProcessor(Singleton):
     """ Functions for page transformation and metadata parsing.
@@ -570,31 +566,31 @@ class PageProcessor(Singleton):
     ### tag rewrites ###
 
     @staticmethod
-    def link(obj,anchor,namespace,base=None):
-        """ XXX: HACK """
-        #portlet_url = urlparse("http://localhost:8000/hack")
-        #print portlet_url
+    def link(obj,location,query,anchor,namespace,base=None):
+        """ Ordinary hyperlink.
+        
+            TODO: test "javascript:" and "#"
+        """
         #log.debug('anchor: %s' % etree.tostring(anchor[0]))
-        # TODO: test "javascript:" and "#"
-        
-        path = '/hesari'
-        
-        href= anchor[0].get('href')
+
+        href = anchor[0].get('href')
         if not href:
             return anchor
-        
-        #cgi.parse_qs(urlparse.urlsplit(foo).query)
-        url_param = quote(
-            href.encode('utf8'))
-        query = '%s_href=%s' % (namespace, url_param)
-        
-        anchor[0].set('href', urlunsplit((
-            'http',
-            'localhost:8000',
-            path,
-            query,
-            ''
-            )))
+
+        if base is not None:
+            # rewrite url
+            href = PageProcessor.href(None,href,base)
+
+        url = PortletURL.render_url(
+            location = urlsplit(location),
+            query = QueryDict(query),
+            namespace = namespace,
+            href = href,
+            params = {},
+            method = 'GET'
+            )
+
+        anchor[0].set('href', url.__unicode__())
         return anchor
 
     @staticmethod
