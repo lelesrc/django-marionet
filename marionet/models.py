@@ -4,6 +4,7 @@
 
 # django imports
 from django import forms
+from django.contrib.auth.models import User
 from django.db import models
 from django.http import QueryDict
 from django.template import RequestContext
@@ -168,20 +169,12 @@ class PortletFilter():
         return do_filter
 
 
-class MarionetSession(PortletSession):
-    portlet = models.ForeignKey('Marionet')
-    user_id = models.CharField(max_length=8,blank=True) # XXX
-
-    def __unicode__(self):
-        return 'session :>'
-
-
 class Marionet(Portlet):
     """ A new session is always created.
     """
     VERSION = '0.0.1'
 
-    url = models.CharField(null=True, max_length=256)
+    url = models.URLField(null=True)
 
     def __init__(self, *args, **kwargs):
         kwargs['session_callback'] = Marionet.session_callback
@@ -287,6 +280,15 @@ class MarionetForm(forms.ModelForm):
         model = Marionet
 
 register_portlet(Marionet, "Marionet")
+
+
+class MarionetSession(PortletSession):
+    marionet = models.ForeignKey(Marionet,null=True)
+    user = models.ForeignKey(User, unique=True)
+    #user_id = models.CharField(max_length=8,blank=True) # XXX
+
+    def __unicode__(self):
+        return 'session :>'
 
 
 class WebClient():
