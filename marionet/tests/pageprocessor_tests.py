@@ -4,7 +4,7 @@
 from django.test import TestCase
 
 from marionet import log
-from marionet.models import Marionet, WebClient, PageProcessor
+from marionet.models import Marionet, WebClient, PageProcessor, MarionetSession
 from marionet.tests.utils import RequestFactory
 from test.settings import TEST_LOG_LEVEL
 log.setlevel(TEST_LOG_LEVEL)
@@ -42,7 +42,7 @@ class PageProcessorTestCase(TestCase):
         tree = PageProcessor.parse_tree(response)
         self.assert_(tree)
         # trigger side effects!
-        tree = PageProcessor.append_metadata(tree,portlet)
+        tree = PageProcessor.append_metadata(tree,portlet.session)
         #
         out = PageProcessor.transform(tree,sheet='body')
         soup = BeautifulSoup(str(out))
@@ -67,7 +67,7 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual(tree.__class__, etree._ElementTree)
         # test meta data
         # trigger side effects!
-        tree = PageProcessor.append_metadata(tree,portlet)
+        tree = PageProcessor.append_metadata(tree,portlet.session)
         #
         portlet_tag = tree.find('//head/portlet-session')
         self.assertEqual(portlet_tag.__class__, etree._Element)
@@ -87,9 +87,9 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual(tree.__class__, etree._ElementTree)
         # test meta data
         # trigger side effects!
-        tree = PageProcessor.append_metadata(tree,portlet)
+        tree = PageProcessor.append_metadata(tree,portlet.session)
         #
-        portlet_tag = tree.find('//html/head/portlet-session')
+        portlet_tag = tree.find('//head/portlet-session')
         self.assertEqual(portlet_tag.__class__, etree._Element)
         self.assertEqual(portlet_tag.get('namespace'), portlet.session.get('namespace'))
         self.assertEqual(portlet_tag.get('baseURL'), self.junit_base)
@@ -107,7 +107,7 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual(etree._ElementTree, tree.__class__)
         # test meta data
         # trigger side effects!
-        tree = PageProcessor.append_metadata(tree,portlet)
+        tree = PageProcessor.append_metadata(tree,portlet.session)
         #
         portlet_tag = tree.find('head/portlet-session')
         self.assertEqual(portlet_tag.__class__, etree._Element)
@@ -123,9 +123,8 @@ class PageProcessorTestCase(TestCase):
         self.assert_(client)
         response = client.get(url)
         self.assertEqual(200, response.status)
-        (out,meta) = PageProcessor.process(response,portlet)
+        out = PageProcessor.process(response,portlet.session)
         self.assert_(out)
-        #self.assert_(meta)
 
         soup = BeautifulSoup(str(out))
         self.assert_(soup)
@@ -136,15 +135,40 @@ class PageProcessorTestCase(TestCase):
         portlet_div = soup.find(id='%s_body' % portlet.session.get('namespace'))
         self.assert_(portlet_div)
 
-    def test_title_ok(self):
+    def test_append_metadata(self):
+        tree = etree.fromstring('''
+<html>
+  <head>
+    <title>
+      awesome title
+    </title>
+    <base href="http://example.com/resources" />
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8"></meta>
+  </head>
+</html>
+            ''').getroottree()
+        session = MarionetSession()
+        tree = PageProcessor.append_metadata(tree,session)
+
+        self.assertEqual(session.get('baseURL'), 'http://example.com/resources')
+        self.assertEqual(session.get('title'), 'awesome title')
+
+        head_session = tree.find('//head/portlet-session')
+        self.assertEqual(head_session.get('baseURL'), 'http://example.com/resources')
+        self.assertEqual(head_session.get('title'), 'awesome title')
+        self.assertEqual(head_session.get('namespace'), session.get('namespace'))
+
+
+    def test_title(self):
         ''' Portlet title
         '''
         portlet = Marionet(session=True)
+        self.assertEqual(portlet.title, '')
         html = '''
 <html>
   <head>
     <title>
-      Portlet title
+      funkadelic title
     </title>
     <meta http-equiv="content-type" content="text/html; charset=UTF-8"></meta>
   </head>
@@ -152,10 +176,9 @@ class PageProcessorTestCase(TestCase):
             '''
         response = ResponseMock(body=html)
         self.assert_(response)
-        (out,meta) = PageProcessor.process(response,portlet)
+        out = PageProcessor.process(response,portlet.session)
         self.assert_(out)
-        #self.assert_(meta)
-        self.assertEqual('Portlet title',portlet.title)
+        self.assertEqual(portlet.session.get('title'),'funkadelic title')
 
         soup = BeautifulSoup(str(out))
         self.assert_(soup)
@@ -175,9 +198,9 @@ class PageProcessorTestCase(TestCase):
             '''
         response = ResponseMock(body=html)
         self.assert_(response)
-        (out,meta) = PageProcessor.process(response,portlet)
+        out = PageProcessor.process(response,portlet.session)
         self.assert_(out)
-        self.assertEqual('',portlet.title)
+        self.assertEqual(None,portlet.session.get('title'))
 
         soup = BeautifulSoup(str(out))
         self.assert_(soup)
@@ -194,7 +217,7 @@ class PageProcessorTestCase(TestCase):
         self.assert_(client)
         response = client.get(url)
         self.assertEqual(200, response.status)
-        (out,meta) = PageProcessor.process(response,portlet)
+        out = PageProcessor.process(response,portlet.session)
         self.assert_(out)
         soup = BeautifulSoup(str(out))
         self.assert_(soup)
@@ -224,7 +247,7 @@ class PageProcessorTestCase(TestCase):
         self.assert_(client)
         response = client.get(url)
         self.assertEqual(200, response.status)
-        (out,meta) = PageProcessor.process(response,portlet)
+        out = PageProcessor.process(response,portlet.session)
         self.assert_(out)
         #print out
         soup = BeautifulSoup(str(out))
@@ -265,7 +288,7 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual(200, response.status)
 
         portlet.session.set('location', 'http://example.com:8000/some-page')
-        (out,meta) = PageProcessor.process(response,portlet)
+        out = PageProcessor.process(response,portlet.session)
 
         soup = BeautifulSoup(out)
         link = soup.find(id='anchor_absolute_url').find('a')
@@ -302,9 +325,8 @@ class PageProcessorTestCase(TestCase):
         self.assert_(client)
         response = client.get(url)
         self.assertEqual(200, response.status)
-        (out,meta) = PageProcessor.process(response,portlet)
+        out = PageProcessor.process(response,portlet.session)
         self.assert_(out)
-        #self.assert_(meta)
 
         soup = BeautifulSoup(str(out))
         self.assert_(soup)
@@ -316,7 +338,7 @@ class PageProcessorTestCase(TestCase):
         self.assert_(portlet_div)
 
         # title + content are correct
-        self.assertEqual('Portlet title',portlet.title)
+        self.assertEqual('Portlet title',portlet.session.get('title'))
         self.assertEqual('Portlet content',portlet_div.text)
 
         # portlet is updated correctly;

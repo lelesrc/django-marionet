@@ -239,10 +239,21 @@ class Marionet(Portlet):
             client = WebClient()
             # this is the response from the remote server
             response = client.get(self.url)
-            # process the response in this portlet context with this sheet
+            ### process the response . .
+            #
+            # in this portlet context
             self.context = context
-            (out,meta) = PageProcessor.process(response,self,sheet='body')
-            log.info('title: '+self.title)
+            # process alters the state of session
+            # as, fe. html/head may contain <base>
+            out = PageProcessor.process(
+                response,
+                self.session,
+                sheet='body')
+            # get title from page
+            if not self.title:
+                if self.session.get('title'):
+                    self.title = self.session.get('title')
+                    log.info('title: '+self.title)
             log.info('Page length: %i bytes' % (len(out)))
             return out
         except:
@@ -283,12 +294,27 @@ register_portlet(Marionet, "Marionet")
 
 
 class MarionetSession(PortletSession):
-    marionet = models.ForeignKey(Marionet,null=True)
+    portlet = models.ForeignKey(Marionet,null=True)
     user = models.ForeignKey(User, unique=True)
-    #user_id = models.CharField(max_length=8,blank=True) # XXX
+
+    def __init__(self,*args,**kwargs):
+        # capture user and portlet
+        log.debug('new MarionetSession: %s' % str(kwargs))
+        user = portlet = None
+        if 'user' in kwargs:
+            user = kwargs.pop('user')
+        if 'portlet' in kwargs:
+            portlet = kwargs.pop('portlet')
+
+        super(MarionetSession, self).__init__(*args,**kwargs)
+
+        if user:
+            self.user = user
+        if portlet:
+            self.portlet = portlet
 
     def __unicode__(self):
-        return 'session :>'
+        return 'MarionetSession %s for user %s with marionet %s ' % (self.id, self.user_id, self.portlet_id)
 
 
 class WebClient():
@@ -449,7 +475,6 @@ class PageProcessor(Singleton):
     <!-- Rewrite image references -->
     <xsl:template match="img">
       <xsl:copy-of select="marionet:image(.,string($base))"/>
-      <div id="{$foo}" />
     </xsl:template>
 
     <!-- Convert link tags in head to style tags -->
@@ -496,26 +521,19 @@ class PageProcessor(Singleton):
         return root
 
     @staticmethod
-    def append_metadata(root,portlet):
-        """ Updates both root and portlet state.
+    def append_metadata(root,session):
+        """ Updates both root and portlet session state.
 
-        ElementTree root is added a /html/head/portlet-session from portlet.session._Element.
-        This is for XSLT parser to obtain local variables.
+        For XSLT parser to obtain local variables,
+        a MarionetSession etree.Element is appended
+        to /html/head/portlet-session.
 
-        Marionet portlet.session is updated to reflect html metadata.
-        * session.base
+        MarionetSession session, as a side-effect, is a
+        updated to reflect html metadata.
+        * base => @baseURL
+        * title
         * 
         """
-        #
-        # base url
-        #
-        # by default use portlet session base
-        #
-        head_base = root.find('head/base')
-        if head_base is not None:
-            base = head_base.get('href')
-            log.debug('found head base %s' % (base))
-            portlet.session.set('baseURL', base)
         #
         # get xmlns
         #
@@ -526,24 +544,31 @@ class PageProcessor(Singleton):
         else:
             xmlns = ''
         #
-        # append
+        # resolve head
         #
-        head = root.find('//{%s}head' % xmlns)
+        head = root.find('{%s}head' % xmlns)
         if head is None:
             log.warn('OOPS no head!')
+            # create new head into root
             head = etree.Element('head')
             root.getroot().append(head)
-
-        head.append(portlet.session._Element)
         #
-        # get title for portlet object.
+        # base url
+        #
+        head_base = head.find('base')
+        if head_base is not None:
+            base = head_base.get('href')
+            log.debug('found head base %s' % (base))
+            session.set('baseURL', base)
+        #
+        # title
         #
         title = head.find('{%s}title' % xmlns)
         if title is not None:
             # strip leading and trailing non-word chars
-            portlet.title = re.sub(
+            session.set('title', re.sub(
                 r'^\W+|\W+$','',
-                title.text)
+                title.text))
         """
         Get content_type and charset.
         Not used so commented out.
@@ -553,6 +578,10 @@ class PageProcessor(Singleton):
             (meta['content_type'],meta['charset']) = '; '.split(
                 _content[0].attrib['content'])
         """
+        #
+        # append
+        #
+        head.append(session._Element)
 
         """
         log.debug(' # new head')
@@ -570,10 +599,10 @@ class PageProcessor(Singleton):
         xslt_tree = PageProcessor.getInstance().sheets[sheet]
         return etree.XSLT(xslt_tree)(
             html_tree,
-            foo="'bar'")
-
+#            foo="'bar'"  # XXX insert XSLT variables, remember if needed
+            )
     @staticmethod
-    def process(html,portlet,**kwargs):
+    def process(html,session,**kwargs):
         """ Serializes the response body to a node tree,
             extracts metadata and transforms the portlet body.
             Context contains keys 'request' and 'response', where
@@ -584,22 +613,23 @@ class PageProcessor(Singleton):
         """
         #log.debug('processing response for portlet %s' % (portlet))
         tree = PageProcessor.parse_tree(html)
-        #
+
         # add portlet metadata
         #
-        PageProcessor.append_metadata(tree,portlet)
+        PageProcessor.append_metadata(tree,session)
 
-        html = str(
-            PageProcessor.transform(tree,**kwargs))
+        # execute XSLT and collect metadata
+        #
+        html = str(PageProcessor.transform(tree,**kwargs))
         """
         log.debug(' # portlet html')
         log.debug(html)
         log.debug(' # # #')
         """
-        return (html,{}) # meta is deprecated
+        return html
 
 
-    ### tag rewrites ###
+    ### ### tag rewrite functions
 
     @staticmethod
     def link(obj,anchor,location,query,namespace,base=None):
