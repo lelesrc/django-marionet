@@ -74,8 +74,22 @@ def marionet(request,portlet_id):
     """
     """
     portlet =  Marionet.objects.get(id=portlet_id)
-    portlet.session = MarionetSession()
-    log.debug(portlet)
+    print portlet.session
+    # XXX: match user to session
+    print request.user
+    log.debug(' --> fetch session')
+    session, created = MarionetSession.objects.get_or_create(portlet=portlet,user=request.user)
+    if created:
+        log.debug(session)
+        log.debug(session.id)
+        log.debug(session.name)
+        log.debug(session._Element)
+        session.save()
+        portlet.session = session
+    else:
+        log.warn('oops, could not fetch session for user '+str(request.user))
+
+    #log.info(portlet)
     return render_to_response("url.html", {
         "portlet" : portlet,
         },

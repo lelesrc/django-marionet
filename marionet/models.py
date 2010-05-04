@@ -294,11 +294,20 @@ register_portlet(Marionet, "Marionet")
 
 
 class MarionetSession(PortletSession):
-    portlet = models.ForeignKey(Marionet,null=True)
-    user = models.ForeignKey(User, unique=True)
+    """ Connects marionet and a user,
+        so a single portlet can be created on the page,
+        and all users accessing have their own session.
+    """
+    portlet = models.ForeignKey(Marionet, null=True)
+    user = models.ForeignKey(User, null=True, unique=True)
+    cookie = '' # TODO: store to database
 
     def __init__(self,*args,**kwargs):
-        # capture user and portlet
+        """ Captures user and portlet from kwargs,
+            because PortletSession cannot handle them.
+            
+            XXX: is ugly!
+        """
         log.debug('new MarionetSession: %s' % str(kwargs))
         user = portlet = None
         if 'user' in kwargs:

@@ -3,6 +3,7 @@
 
 # django imports
 from django.contrib.flatpages.models import FlatPage
+from django.contrib.auth.models import User
 from django.db import IntegrityError
 from django.template import RequestContext
 from django.test import TestCase
@@ -68,7 +69,7 @@ class MarionetTestCase(TestCase):
         self.assertEqual(portlet.session.id,session.id)
         self.assertEqual(portlet.url, self.junit_url)
         print portlet.session
-        self.assertEqual(portlet.title, 'test portlet')
+        self.assertEqual(portlet.session.get('title'), 'test portlet')
         self.assertEqual(portlet.session.get('baseURL'), self.junit_base)
         del(portlet)
 
@@ -346,6 +347,77 @@ class MarionetTestCase(TestCase):
         self.assertEqual(location, 'http://testserver:80/page/1')
         query = portlet.session.get('query')
         self.assertEqual(query, 'foo=bar')
+
+    def test_marionet_session3(self):
+        """ MarionetSession with user
+        """
+        user = User.objects.create_user(username="lion", email="fred@savanna.ke", password="roar")
+        c = Client()
+        login = c.login(username='lion', password='roar')
+        self.failUnless(login, 'Could not log in')
+
+        portlet = Marionet.objects.create(url=self.junit_url,session=True)
+        response = c.get('/marionet/%s/' % portlet.id)
+        self.assertEqual(response.status_code, 200)
+        #"""
+        print portlet.session
+        print portlet.session.id
+        print portlet.session.name
+        """
+        self.assertNotEqual(portlet.session.id, None)
+        self.assertEqual(response.context['user'].username, 'testclient')
+        self.assertEqual(portlet.session.user_id, user.id)
+
+        response = c.get('/marionet/%s/' % portlet.id)
+        #self.assertEqual(response.status_code, 200)
+        print portlet.session.id
+        """
+
+    def test_marionet_session4(self):
+        """ MarionetSession with user
+        """
+        user = User.objects.create_user(username="lion", email="fred@savanna.ke", password="roar")
+        portlet = Marionet.objects.create(url=self.junit_url,session=False)
+        self.assertEqual(portlet.session, None)
+        session = MarionetSession(user=user,portlet=portlet)
+        self.assert_(session)
+        print session
+        self.assertEqual(session.user, user)
+        self.assertEqual(session.portlet, portlet)
+        self.assertEqual(portlet.session, None) # no side effects
+        session.save()
+        portlet.session = session
+        portlet.save()
+        del(session)
+        id = portlet.id
+        del(portlet)
+        portlet = Marionet.objects.get(id=id)
+        # session is not stored to the portlet
+        self.assertEqual(portlet.session, None)
+
+    def test_marionet_session5(self):
+        """ MarionetSession without portlet
+        """
+        user = User.objects.create_user(username="lion", email="fred@savanna.ke", password="roar")
+        session = MarionetSession(user=user)
+        self.assert_(session)
+        self.assertEqual(session.user, user)
+
+    def test_marionet_session6(self):
+        """ MarionetSession with extra attributes
+        """
+        user = User.objects.create_user(username="lion", email="fred@savanna.ke", password="roar")
+        session = MarionetSession(user=user, url='http://example.com')
+        self.assert_(session)
+        self.assertEqual(session.user, user)
+        self.assertEqual(session.get('url'), 'http://example.com')
+        session.save()
+        id = session.id
+        del(session)
+        session = MarionetSession.objects.get(id=id)
+        self.assertEqual(session.get('url'), 'http://example.com')
+
+
 
     def test_registered_portlet(self):
         c = Client()
