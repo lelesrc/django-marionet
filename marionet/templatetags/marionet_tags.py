@@ -20,10 +20,10 @@ register = template.Library()
 def marionet_render(context,portlet):
     """ Portlet with funny CSS.
     """
-    log.debug(" % render tag")
+    log.debug(" % % % render tag")
     content = portlet.render(context)
     title = portlet.title
-    log.debug("marionet portlet: %s" % (title))
+    log.debug("rendering portlet: %s" % (portlet))
     return {
         'title': title,
         'content': content,

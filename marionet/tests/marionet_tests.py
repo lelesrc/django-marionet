@@ -349,29 +349,47 @@ class MarionetTestCase(TestCase):
         self.assertEqual(query, 'foo=bar')
 
     def test_marionet_session3(self):
-        """ MarionetSession with user
+        """ MarionetSession with user.
+            Creates a new session on first request, and retrieves it on the second request.
         """
-        user = User.objects.create_user(username="lion", email="fred@savanna.ke", password="roar")
+        user = User.objects.create_user(
+            username="lion",
+            email="untamed_animal@savanna.ke",
+            password="roar"
+            )
         c = Client()
         login = c.login(username='lion', password='roar')
         self.failUnless(login, 'Could not log in')
 
-        portlet = Marionet.objects.create(url=self.junit_url,session=True)
-        response = c.get('/marionet/%s/' % portlet.id)
-        self.assertEqual(response.status_code, 200)
-        #"""
-        print portlet.session
-        print portlet.session.id
-        print portlet.session.name
-        """
-        self.assertNotEqual(portlet.session.id, None)
-        self.assertEqual(response.context['user'].username, 'testclient')
-        self.assertEqual(portlet.session.user_id, user.id)
+        portlet = Marionet.objects.create(url=self.junit_url,session=False)
+        # there should be no existing session
+        self.assertEqual(portlet.session, None)
+        self.assertRaises(MarionetSession.DoesNotExist,
+            MarionetSession.objects.get, portlet=portlet, user=user)
 
         response = c.get('/marionet/%s/' % portlet.id)
-        #self.assertEqual(response.status_code, 200)
-        print portlet.session.id
-        """
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['user'].username, 'lion')
+        # no more trace of volatile portlet session
+        self.assertEqual(portlet.session, None)
+        # but the session should exist in the database
+        session = MarionetSession.objects.get(portlet=portlet, user=user)
+        portlet_body_id = '%s_body' % session.get('namespace')
+        self.assert_(session)
+        self.assertEqual(session.user_id, user.id)
+        # does the portlet output the correct namespace?
+        soup = BeautifulSoup(response.content)
+        portlet_div = soup.find(id=portlet_body_id)
+        self.assert_(portlet_div)
+
+        # request again to see that the view loads the correct session,
+        # instead of creating a new one
+        del(response)
+        response = c.get('/marionet/%s/' % portlet.id)
+        self.assertEqual(response.status_code, 200)
+        soup = BeautifulSoup(response.content)
+        portlet_div = soup.find(id=portlet_body_id)
+        self.assert_(portlet_div)
 
     def test_marionet_session4(self):
         """ MarionetSession with user

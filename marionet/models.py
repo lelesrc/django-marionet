@@ -158,7 +158,8 @@ class PortletFilter():
                 else:
                     log.debug('no href key')
             else:
-                log.debug('no query parameters')
+                pass
+                #log.debug('no query parameters')
 
             return view_func(portlet,context)
 
@@ -177,12 +178,22 @@ class Marionet(Portlet):
     url = models.URLField(null=True)
 
     def __init__(self, *args, **kwargs):
-        kwargs['session_callback'] = Marionet.session_callback
         #log.debug('initializing marionet: '+str(kwargs))
+        if 'session' in kwargs:
+            session = kwargs.pop('session')
+            if isinstance(session, PortletSession):
+                print 'marionet ~ prepared session'
+                self.session = session
+            elif session is True:
+                print 'marionet ~ new session'
+                # session requested, create volatile
+                self.session = MarionetSession(*args,**kwargs)
+        kwargs['session_callback'] = Marionet.session_callback
         super(Marionet, self).__init__(
             *args,
             **kwargs
             )
+        # set state up-to-date
         if not self.url and self.session:
             self.url = self.session.get('url')
         log.info(self.__unicode__())
@@ -298,32 +309,13 @@ class MarionetSession(PortletSession):
         so a single portlet can be created on the page,
         and all users accessing have their own session.
     """
-    portlet = models.ForeignKey(Marionet, null=True)
     user = models.ForeignKey(User, null=True, unique=True)
+    portlet = models.ForeignKey(Marionet, null=True)
     cookie = '' # TODO: store to database
 
-    def __init__(self,*args,**kwargs):
-        """ Captures user and portlet from kwargs,
-            because PortletSession cannot handle them.
-            
-            XXX: is ugly!
-        """
-        log.debug('new MarionetSession: %s' % str(kwargs))
-        user = portlet = None
-        if 'user' in kwargs:
-            user = kwargs.pop('user')
-        if 'portlet' in kwargs:
-            portlet = kwargs.pop('portlet')
-
-        super(MarionetSession, self).__init__(*args,**kwargs)
-
-        if user:
-            self.user = user
-        if portlet:
-            self.portlet = portlet
-
     def __unicode__(self):
-        return 'MarionetSession %s for user %s with marionet %s ' % (self.id, self.user_id, self.portlet_id)
+        return 'MarionetSession %s for user %s with marionet %s ' % (
+            self.id, self.user_id, self.portlet_id)
 
 
 class WebClient():
