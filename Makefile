@@ -1,5 +1,8 @@
 test: syncdb
-	PYTHONPATH=`pwd` DJANGO_SETTINGS_MODULE=test.settings django-admin.py test marionet
+	PYTHONPATH=`pwd` DJANGO_SETTINGS_MODULE=test.settings django-admin.py test marionet portlets
+
+reset:
+	PYTHONPATH=`pwd` DJANGO_SETTINGS_MODULE=test.settings django-admin.py reset marionet portlets
 
 syncdb:
 	PYTHONPATH=`pwd` DJANGO_SETTINGS_MODULE=test.settings django-admin.py syncdb
