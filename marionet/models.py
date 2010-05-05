@@ -182,20 +182,30 @@ class Marionet(Portlet):
         if 'session' in kwargs:
             session = kwargs.pop('session')
             if isinstance(session, PortletSession):
-                print 'marionet ~ prepared session'
+                log.debug('marionet ~ prepared session')
                 self.session = session
             elif session is True:
-                print 'marionet ~ new session'
+                log.debug('marionet ~ new session')
                 # session requested, create volatile
                 self.session = MarionetSession(*args,**kwargs)
-        kwargs['session_callback'] = Marionet.session_callback
         super(Marionet, self).__init__(
             *args,
             **kwargs
             )
-        # set state up-to-date
-        if not self.url and self.session:
-            self.url = self.session.get('url')
+        ### set state up-to-date
+        if self.session:
+            # Marionet
+            if not self.url:
+                self.url = self.session.get('url')
+            # MarionetSession
+            #
+            # baseURL
+            if self.session.get('baseURL') is None:
+                if self.url is not None:
+                    _url = urlparse(self.session.get('url'))
+                    self.session.set('baseURL',
+                        '%s://%s' % (_url.scheme, _url.netloc))
+
         log.info(self.__unicode__())
         #log.info("Marionet %s: %s, session %s" % (self.id,self.url,self.session.name))
         #log.info(self.session)
@@ -205,23 +215,6 @@ class Marionet(Portlet):
             return 'marionet_%s.%s.%s' % (self.id, self.session.name, self.url)
         else:
             return 'marionet_%s.%s' % (self.id, self.url)
-
-    @staticmethod
-    def session_callback(session):
-        """ Called at session initialization.
-            @returns a dict to be appended to session.
-        """
-        __dict = {}
-
-        # MarionetSession
-        #
-        # baseURL
-        if session.get('baseURL') is None:
-            if session.get('url') is not None:
-                _url = urlparse(session.get('url'))
-                __dict['baseURL'] = '%s://%s' % (_url.scheme, _url.netloc)
-            # else do not set base
-        return __dict
 
     @PortletFilter.render_filter
     def render(self, context):
