@@ -205,29 +205,32 @@ class MarionetTestCase(TestCase):
         self.__test_target1(portlet,href)
 
     def test_http_post(self):
-        """
         url = self.junit_url+'/http_post'
-        portlet = Marionet.objects.create(url=url)
-        
+        portlet = Marionet.objects.create(url=url, session=True)
+
         # POST to the same url
         href = url
-        portlet_url_query = '%s_href=%s' % (portlet.session.get('namespace')), 
-            quote(href.encode('utf8'))
-            )
-        path = '/page/1' + '?' + portlet_url_query
+        ns = portlet.session.get('namespace')
+        query = QueryDict('')
+        query._mutable = True
+        query.__setitem__(ns+'.href', quote(href.encode('utf8')))
+        query.__setitem__(ns+'.action', 'process') # processAction
+
+        path = '/page/1' + '?' + query.urlencode()
+        # POST params
         params = {'msg': 'test message'}
         request = RequestFactory().post(path, params)
-
         ctx = RequestContext(request)
-        ctx['path'] = request.path
-        ctx['GET'] = request.GET
-        ctx['POST'] = request.POST
-
-        out = portlet.render(ctx)
+        out = portlet.render(ctx) # XXX
         self.assert_(out)
-        self.assert_(portlet.context)
-        self.assertEqual(portlet.context['path'],'/page/1')
         self.assertEqual(portlet.url, url)
+        self.assert_(portlet.session)
+
+        location = portlet.session.get('location')
+        self.assertEqual(location, 'http://testserver:80/page/1')
+        # portlet query string
+        qs = portlet.session.get('qs')
+        self.assertEqual(qs, 'msg=test+message')
 
         soup = BeautifulSoup(str(out))
         self.assert_(soup)
@@ -235,15 +238,10 @@ class MarionetTestCase(TestCase):
         self.assertEqual(soup.find().name, 'div')
         self.assertEqual(soup.find('head'), None)
         # namespace is correct
-        portlet_div = soup.find(id='%s_body' % portlet.session.get('namespace'))
+        portlet_div = soup.find(id='%s_body' % ns)
         self.assert_(portlet_div)
-        print portlet_div
         msg = portlet_div.find(id='post_msg')
         self.assertEqual(msg.text, params['msg'])
-        print msg #.text
-#        link = portlet_div.find('a')
-#        self.assert_(link)
-        """
 
     def __test_render_url(self):
         pass
@@ -328,7 +326,7 @@ class MarionetTestCase(TestCase):
         self.assertEqual(portlet.session.get('baseURL'), self.junit_base)
 
     def test_marionet_session2(self):
-        """ Session location and query
+        """ Session location and query with GET
         """
         query = {
             'foo': 'bar'

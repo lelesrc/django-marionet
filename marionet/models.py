@@ -110,7 +110,7 @@ class PortletURL():
         # - since query is immutable, create a copy if needed
         _query = copy(query)
         log.debug('context query: %s' % (_query))
-        _query.__setitem__(namespace+'_href', href)
+        _query.__setitem__(namespace+'.href', href)
 
         return PortletURL(location, _query)
 
@@ -139,24 +139,35 @@ class PortletFilter():
             """ Prepares the portlet by preprocessed context
             """ 
             log.debug(' * * * render filter activated')
+            # by default, use GET
+            portlet.session.set('method', 'GET')
             #
-            ### href
+            ### match portlet query directive
             #
-            href_key = '%s_href' % (portlet.session.get('namespace'))
-            #log.debug(href_key)
             query = context.get('query')
-            if query:
-                if query.__contains__(href_key):
-                    href = query.__getitem__(href_key)
+            for key in query.keys():
+                namespace = portlet.session.get('namespace')
+                m = re.match('%s\.(.*)' % namespace, key)
+                directive = m.group(1)
+                log.debug(' * '+namespace+' '+directive)
+                if directive == 'href':
+                    href = query.__getitem__(key)
                     #log.debug('portlet href: %s' % (href))
                     # rewrite url
                     base = portlet.session.get('baseURL')
                     url = PageProcessor.href(None,href,base)
-                    log.debug('new url: %s' % (url))
                     # update portlet
                     portlet.url = unquote(url)
-                else:
-                    log.debug('no href key')
+                    log.debug('new url: %s' % (portlet.url))
+                    # XXX: delete method
+                elif directive == 'action':
+                    action = query.__getitem__(key)
+                    log.debug('portlet action '+action)
+                    if action == 'process':
+                        portlet.session.set('method', 'POST')
+                        # portlet query string from request.POST
+                        portlet.session.set('qs', context.get('post').urlencode())
+
             else:
                 pass
                 #log.debug('no query parameters')
@@ -176,6 +187,8 @@ class Marionet(Portlet):
     VERSION = '0.0.1'
 
     url = models.URLField(null=True)
+    # holder for user session for the render phase, not stored to database
+    session = None
 
     def __init__(self, *args, **kwargs):
         #log.debug('initializing marionet: '+str(kwargs))
@@ -237,12 +250,17 @@ class Marionet(Portlet):
         if context['query'] is not None:
             self.session.set('query',
                 context['query'].urlencode())
-        log.debug(self.session)
+        #log.debug(self.session)
 
         try:
             client = WebClient()
-            # this is the response from the remote server
-            response = client.get(self.url)
+            ### select method and exec request
+            if self.session.get('method') == 'GET':
+                response = client.get(self.url)
+            if self.session.get('method') == 'POST':
+                params = QueryDict(self.session.get('qs'))
+                response = client.post(self.url, params)
+
             ### process the response . .
             #
             # in this portlet context
