@@ -143,7 +143,7 @@ class MarionetTestCase(TestCase):
 
     def __test_target1(self,portlet,href):
         query = {
-            '%s_href' % (portlet.session.get('namespace')): href
+            '%s.href' % (portlet.session.get('namespace')): href
         }
         path = '/page/1'
         request = RequestFactory().get(path, query)
@@ -167,10 +167,10 @@ class MarionetTestCase(TestCase):
         self.assert_(portlet_div)
         link = portlet_div.find('a')
         self.assert_(link)
-        print link
+        #print link
         self.assertEqual(
-            'http://testserver:80/page/1?'+str(portlet.session.get('namespace'))+'_href=http%3A//localhost%3A3000/caterpillar/test_bench/target2',
-            link.get('href') 
+            link.get('href'),
+            'http://testserver:80/page/1?'+str(portlet.session.get('namespace'))+'.href=http%3A//localhost%3A3000/caterpillar/test_bench/target2'
             )
 
     def test_portlet_url__absolute(self):
@@ -473,8 +473,21 @@ class MarionetTestCase(TestCase):
         session = MarionetSession.objects.get(id=id)
         self.assertEqual(session.get('url'), 'http://example.com')
 
+    def test_marionet_session7(self):
+        """ MarionetSession for anonymous user
+        """
+        session = MarionetSession.objects.create()
+        self.assert_(session)
+        self.assertEqual(session.user, None)
+
+        c = Client()
+        portlet = Marionet.objects.create(url=self.junit_url, session=True)
+        response = c.get('/marionet/%s/' % portlet.id)
+        self.assertEqual(response.status_code, 200)
+        # XXX: test bench session
 
 
+    '''
     def test_registered_portlet(self):
         c = Client()
         #response = c.post('/login/', {'username': 'john', 'password': 'smith'})
@@ -485,14 +498,17 @@ class MarionetTestCase(TestCase):
         soup = BeautifulSoup(response.content)
         self.assert_(soup)
         #print soup.html
+    '''
 
 
-
-    def test_xhr_marionet(self):
-        """ XHR
+    def test_xhr_marionet1(self):
+        """ Django receives XHR, portlet GET
         """
+        user = User.objects.create_user(username="toejam", email="toejam@funkotron", password="jammin")
         c = Client()
-        response = c.post('/test_bench/xhr',
+        login = c.login(username='toejam', password='jammin')
+        portlet = Marionet.objects.create(url=self.junit_url+'/check_xhr', session=True)
+        response = c.post('/marionet/%s/' % portlet.id,
             **{'HTTP_X_REQUESTED_WITH': 'XMLHttpRequest'})
         self.assertEqual(response.status_code, 200)
         soup = BeautifulSoup(response.content)
@@ -501,14 +517,19 @@ class MarionetTestCase(TestCase):
         self.assertEqual(len(portlets), 1)
         portlet_div = portlets[0]
         self.assert_(portlet_div)
-        self.assertEqual(portlet_div.find('div').text, 'Hello World!')
+        print portlet_div
+        self.assertEqual(portlet_div.find('div').text, 'false')
 
-    def test_xhr_marionet_fail(self):
-        """ XHR FAIL
+    def test_xhr_marionet2(self):
+        """ Django receives GET, portlet XHR
         """
+        user = User.objects.create_user(username="earl", email="earl@funkotron", password="burb")
         c = Client()
-        response = c.post('/test_bench/xhr',
-            **{'HTTP_X_REQUESTED_WITH': 'XMLHttpRequest'})
+        login = c.login(username='earl', password='burb')
+        portlet = Marionet.objects.create(url=self.junit_url+'/check_xhr', session=True)
+        portlet.session.set('xhr','1')
+        #portlet.session.save()
+        response = c.get('/marionet/%s/' % portlet.id)
         self.assertEqual(response.status_code, 200)
         soup = BeautifulSoup(response.content)
         self.assert_(soup)
@@ -516,14 +537,13 @@ class MarionetTestCase(TestCase):
         self.assertEqual(len(portlets), 1)
         portlet_div = portlets[0]
         self.assert_(portlet_div)
+        print portlet_div
+        self.assertEqual(portlet_div.text, 'true')
+
+    '''
+    def test_not_found(self):
+        """ 
+        """
         self.assertEqual(portlet_div.find('div').text, '404 Not Found')
-
-    def test_xhr_client_fail(self):
-        """ django XHR Client FAIL
-        """
-        c = Client()
-        response = c.get('/test_bench/xhr')
-        self.assertEqual(response.status_code, 404)
-        self.assertEqual(response.content, 'FAIL')
-
+    '''
 

@@ -56,7 +56,7 @@ class PortletURLTestCase(TestCase):
             method = method,
             )
         self.assertEqual(render_url(),
-             'http://testserver:80/page/1?__portlet___href=http%3A//testserver%3A3000/test/target')
+             'http://testserver:80/page/1?__portlet__.href=http%3A//testserver%3A3000/test/target')
 
     def test_render_url__get2(self):
         """ render GET with 2 portlets

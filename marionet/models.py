@@ -152,29 +152,30 @@ class PortletFilter():
             query = context.get('query')
             for key in query.keys():
                 namespace = portlet.session.get('namespace')
-                m = re.match('%s\.(.*)' % namespace, key)
-                directive = m.group(1)
-                log.debug(' * '+namespace+' '+directive)
-                ### set URL
-                if directive == 'href':
-                    href = query.__getitem__(key)
-                    # rewrite url
-                    base = portlet.session.get('baseURL')
-                    url = PageProcessor.href(None,href,base)
-                    # update portlet
-                    portlet.url = unquote(url)
-                    log.debug('new url: %s' % (portlet.url))
-                elif directive == 'action':
-                    action = query.__getitem__(key)
-                    log.debug('portlet action '+action)
-                    ### POST
-                    if action == 'process':
-                        portlet.session.set('method', 'POST')
-                        # portlet query string from request.POST
-                        portlet.session.set('qs', context.get('post').urlencode())
-                ### XHR
-                elif directive == 'xhr':
-                        portlet.session.set('xhr', '1')
+                match = re.match('%s\.(.*)' % namespace, key)
+                if match is not None:
+                    directive = match.group(1)
+                    log.debug(' * '+namespace+' '+directive)
+                    ### set URL
+                    if directive == 'href':
+                        href = query.__getitem__(key)
+                        # rewrite url
+                        base = portlet.session.get('baseURL')
+                        url = PageProcessor.href(None,href,base)
+                        # update portlet
+                        portlet.url = unquote(url)
+                        log.debug('new url: %s' % (portlet.url))
+                    elif directive == 'action':
+                        action = query.__getitem__(key)
+                        log.debug('portlet action '+action)
+                        ### POST
+                        if action == 'process':
+                            portlet.session.set('method', 'POST')
+                            # portlet query string from request.POST
+                            portlet.session.set('qs', context.get('post').urlencode())
+                    ### XHR
+                    elif directive == 'xhr':
+                            portlet.session.set('xhr', '1')
 
             else:
                 pass

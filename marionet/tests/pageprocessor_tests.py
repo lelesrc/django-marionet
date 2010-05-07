@@ -293,7 +293,7 @@ class PageProcessorTestCase(TestCase):
         soup = BeautifulSoup(out)
         link = soup.find(id='anchor_absolute_url').find('a')
         self.assertEqual(
-            'http://example.com:8000/some-page?'+str(portlet.session.get('namespace'))+'_href=http%3A//localhost%3A3000/caterpillar/test_bench',
+            'http://example.com:8000/some-page?'+str(portlet.session.get('namespace'))+'.href=http%3A//localhost%3A3000/caterpillar/test_bench',
             link.get('href') 
             )
 
@@ -312,7 +312,7 @@ class PageProcessorTestCase(TestCase):
             )[0] # take 1st _Element
         self.assertEqual(
             link.get('href'),
-            'http://example.com:8000/some-page?__portlet___href=http%3A//localhost%3A3000/caterpillar/test_bench')
+            'http://example.com:8000/some-page?__portlet__.href=http%3A//localhost%3A3000/caterpillar/test_bench')
         print etree.tostring(link)
 
     def __test_doctype(self,type):
