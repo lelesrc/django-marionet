@@ -142,15 +142,18 @@ class MarionetTestCase(TestCase):
         self.assert_(portlet_div)
 
     def __test_target1(self,portlet,href):
+        # make a query string
         query = {
             '%s.href' % (portlet.session.get('namespace')): href
         }
+        # context path
         path = '/page/1'
         request = RequestFactory().get(path, query)
         context = RequestContext(request, [context_processors.render_ctx])
 
         out = portlet.render(context)
         self.assert_(out)
+        # context location should match
         location = portlet.session.get('location')
         self.assert_(location)
         loc = urlparse(location)
@@ -170,7 +173,7 @@ class MarionetTestCase(TestCase):
         #print link
         self.assertEqual(
             link.get('href'),
-            'http://testserver:80/page/1?'+str(portlet.session.get('namespace'))+'.href=http%3A//localhost%3A3000/caterpillar/test_bench/target2'
+            'http://testserver:80/page/1?'+str(portlet.session.get('namespace'))+'.href=http%3A//localhost%3A3000/caterpillar/test_bench/junit/target2'
             )
 
     def test_portlet_url__absolute(self):

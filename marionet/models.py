@@ -505,17 +505,17 @@ class PageProcessor(Singleton):
         </div>
     </xsl:template>
 
-    <xsl:template match="body">
+    <xsl:template match="*[local-name()='body']">
         <xsl:apply-templates select="node()"/>
     </xsl:template>
 
     <!-- Rewrite links -->
-    <xsl:template match="a">
+    <xsl:template match="*[local-name()='a']">
         <xsl:copy-of select="marionet:link(.,string($location),string($query),string($namespace),string($base))"/>
     </xsl:template>
 
     <!-- Rewrite image references -->
-    <xsl:template match="img">
+    <xsl:template match="*[local-name()='img']">
       <xsl:copy-of select="marionet:image(.,string($base))"/>
     </xsl:template>
 
@@ -703,9 +703,11 @@ class PageProcessor(Singleton):
 
     @staticmethod
     def href(obj,href,base=None):
+        """ Parses base into href to form a complete url.
+        """
         log.debug('parsing href "%s"' % (href))
         if base and not re.match('^http', href):
-            log.debug('base: %s' % (base))
+            #log.debug('base: %s' % (base))
             """
             if re.match('^/', href):
                 log.debug('absolute path')
@@ -713,7 +715,7 @@ class PageProcessor(Singleton):
                 return urljoin(base+'/',href)
             else:
             """
-            log.debug('relative path')
+            #log.debug('relative path')
             join = urljoin(base+'/',href)
             _url = re.sub('(?<!:)//', '/', join)
             #log.debug(_url)
