@@ -398,9 +398,9 @@ class WebClient():
         log.info('GET %s' % (url))
         method = httpclient.GetMethod(url)
         # add cookies
-        method.add_request_header('Cookie',self.cookie_headers())
+        method.set_request_header('Cookie',self.cookie_headers())
         if referer is not None:
-            method.add_request_header('Referer',referer)
+            method.set_request_header('Referer',referer)
         #log.debug(method.getheaders())
         method.execute()
         response = method.get_response()
@@ -418,9 +418,9 @@ class WebClient():
         method = httpclient.PostMethod(url)
         if xhr:
             log.debug('emulating XMLHttpRequest')
-            method.add_request_header(
+            method.set_request_header(
                 'X_REQUESTED_WITH', 'XMLHttpRequest')
-            method.add_request_header(
+            method.set_request_header(
                 'ACCEPT', 'text/javascript, text/html, application/xml, text/xml, */*')
             method.set_request_content_type(
                 'application/x-www-form-urlencoded; charset=UTF-8')
@@ -428,7 +428,7 @@ class WebClient():
         # add parameters to request body
         method.set_body(params)
         # add cookies
-        method.add_request_header('Cookie',self.cookie_headers())
+        method.set_request_header('Cookie',self.cookie_headers())
         # httpclient forgets cookies with automatic redirect..
         method.set_follow_redirects(0)
         #log.debug(method.getheaders())

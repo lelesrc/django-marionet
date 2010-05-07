@@ -359,9 +359,8 @@ class HttpMethodBase:
         @param name: header name.
         @param value: header value.
         """
-        # NOTE: to update cookies, the value needs to be overwritten.
-        #if not(self.__headers.has_key(name)):
-        self.__headers[name] = value
+        if not(self.__headers.has_key(name)):
+            self.__headers[name] = value
     def set_request_header(self, name, value):
         """Sets a request header.
         @param name: header name.
