@@ -109,15 +109,40 @@ class PortletURL():
         # append portlet parameters to query
         # - since query is immutable, create a copy if needed
         _query = copy(query)
-        log.debug('context query: %s' % (_query))
         _query.__setitem__(namespace+'.href', href)
+        log.debug('context query: %s' % (_query))
 
         return PortletURL(location, _query)
 
     @staticmethod
-    def action_url(*args):
-        ''' UNIMPLEMENTED '''
-        raise NotImplemented
+    def action_url(
+        location,
+        query,
+        namespace=None,
+        href=None,
+        params={},
+        method='POST'
+        ):
+        """ @param location = ParseResult
+            @param query = QueryDict
+        """
+        log.debug('action href: %s' % (href))
+        log.debug(location)
+        if href is None:
+            return PortletURL(location, query)
+        if namespace is None:
+            log.warn('Portlet namespace is undefined')
+            return PortletURL(location, query)
+
+        # append portlet parameters to query
+        # - since query is immutable, create a copy if needed
+        _query = copy(query)
+        _query.__setitem__(namespace+'.href', href)
+        _query.__setitem__(namespace+'.action', 'process')
+        log.debug('context query: %s' % (_query))
+
+        return PortletURL(location, _query)
+
 
     @staticmethod
     def resource_url(*args):
@@ -458,6 +483,7 @@ class PageProcessor(Singleton):
         ns['link'] = PageProcessor.link
         ns['image'] = PageProcessor.image
         ns['href'] = PageProcessor.href
+        ns['form'] = PageProcessor.form
 
 
     def __body_xslt(self):
@@ -524,6 +550,11 @@ class PageProcessor(Singleton):
         <style type="text/css" id="{@id}">
         @import "<xsl:value-of select="marionet:href(string(@href),string($base))"/>";
         </style>
+    </xsl:template>
+
+    <!-- Form POST action -->
+    <xsl:template match="*[local-name()='form']">
+        <xsl:copy-of select="marionet:form(.,string($location),string($query),string($namespace),string($base))"/>
     </xsl:template>
 
     <!-- Copy through everything that hasn't been modified by the processor -->
@@ -700,6 +731,27 @@ class PageProcessor(Singleton):
 
         anchor[0].set('href', url.__unicode__())
         return anchor
+
+    @staticmethod
+    def form(obj,form,location,query,namespace,base=None):
+        log.debug('form: %s' % etree.tostring(form[0]))
+        action = form[0].get('action')
+        if not action:
+            return form
+        if base is not None:
+            action = PageProcessor.href(None,action,base)
+
+        url = PortletURL.action_url(
+            location = urlsplit(location),
+            query = QueryDict(query),
+            namespace = namespace,
+            href = action,
+            params = {}, # got from form?
+            method = 'POST'
+            )
+
+        form[0].set('action', url.__unicode__())
+        return form
 
     @staticmethod
     def href(obj,href,base=None):

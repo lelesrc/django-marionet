@@ -315,6 +315,31 @@ class PageProcessorTestCase(TestCase):
             'http://example.com:8000/some-page?__portlet__.href=http%3A//localhost%3A3000/caterpillar/test_bench')
         print etree.tostring(link)
 
+    def test_form(self):
+        # XSLT returns this form
+        location = 'http://example.com:8000/some-page'
+        query = ''
+        form = [etree.fromstring('''
+            <form action="/caterpillar/test_bench/http_methods/post" method="post">
+              <p>
+                <span>Input text:</span>
+                <input id="msg" name="msg" size="42" type="text" value="Python was conceived in the late 1980s and its implementation was started in December 1989 by Guido van Rossum" />
+              </p>
+            </form>
+            ''')]
+
+        namespace = '__portlet__'
+        _form = PageProcessor.form(None,
+            form,
+            location,
+            query,
+            namespace,
+            self.junit_base
+            )[0] # take 1st _Element
+        self.assertEqual(
+            _form.get('action'),
+            'http://example.com:8000/some-page?__portlet__.href=http%3A//localhost%3A3000/caterpillar/test_bench/http_methods/post&__portlet__.action=process')
+
     def __test_doctype(self,type):
         ''' Same test for different DOCTYPEs
         '''
