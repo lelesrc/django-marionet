@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+from django.http import QueryDict
 from django.test import TestCase
 
 from marionet import log
@@ -101,13 +102,13 @@ class WebClientTestCase(TestCase):
         self.assert_(client)
         self.assertEqual(0, len(client.cookies))
         url = self.junit_url+'/post_params'
-        params = {'foo': 'bar', 'baz': 'xyz'}
+        params = 'foo=bar&baz=xyz'
         response = client.post(url,params=params)
         self.assertEqual(200, response.status)
         self.assertEqual(0, len(client.cookies))
         xml = response.read()
         doc = libxml2.parseDoc(xml)
-        for (k,v) in params.items():
+        for (k,v) in QueryDict(params).items():
             n = doc.xpathEval('//'+k)
             self.assert_(n)
             self.assertEqual(v,n[0].content)
@@ -127,7 +128,6 @@ class WebClientTestCase(TestCase):
         # server adds a third cookie at redirect
         self.assertEqual(3, len(client.cookies))
         xml = response.read()
-        #print xml
         doc = libxml2.parseDoc(xml)
         for _c in cookies.values():
             (k,v) = _c[0].split('=')
@@ -173,3 +173,26 @@ class WebClientTestCase(TestCase):
         self.assertEqual(3, len(client_2.cookies))
         self.assertEqual(2, len(client_1.cookies))
 
+    def test_xhr(self):
+        """ Simple XHR test.
+        """
+        client = WebClient()
+        self.assert_(client)
+        response = client.post(self.junit_url+'/check_xhr',xhr=True)
+        self.assertEqual(200, response.status)
+        self.assertEqual(response.read(), 'true')
+
+    def test_xhr_post(self):
+        """ XHR POST.
+        """
+        client = WebClient()
+        self.assert_(client)
+        params = 'foo=bar&msg=test+message'
+        response = client.post(self.junit_url+'/xhr_post',params=params,xhr=True)
+        self.assertEqual(200, response.status)
+        xml = response.read()
+        doc = libxml2.parseDoc(xml)
+        for (k,v) in QueryDict(params).items():
+            n = doc.xpathEval('//'+k)
+            self.assert_(n)
+            self.assertEqual(v,n[0].content)

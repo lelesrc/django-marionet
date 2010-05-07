@@ -139,8 +139,13 @@ class PortletFilter():
             """ Prepares the portlet by preprocessed context
             """ 
             log.debug(' * * * render filter activated')
-            # by default, use GET
+            #
+            ### session defaults
+            #
+            # use GET
             portlet.session.set('method', 'GET')
+            # no XHR
+            portlet.session.set('xhr', '0')
             #
             ### match portlet query directive
             #
@@ -150,23 +155,26 @@ class PortletFilter():
                 m = re.match('%s\.(.*)' % namespace, key)
                 directive = m.group(1)
                 log.debug(' * '+namespace+' '+directive)
+                ### set URL
                 if directive == 'href':
                     href = query.__getitem__(key)
-                    #log.debug('portlet href: %s' % (href))
                     # rewrite url
                     base = portlet.session.get('baseURL')
                     url = PageProcessor.href(None,href,base)
                     # update portlet
                     portlet.url = unquote(url)
                     log.debug('new url: %s' % (portlet.url))
-                    # XXX: delete method
                 elif directive == 'action':
                     action = query.__getitem__(key)
                     log.debug('portlet action '+action)
+                    ### POST
                     if action == 'process':
                         portlet.session.set('method', 'POST')
                         # portlet query string from request.POST
                         portlet.session.set('qs', context.get('post').urlencode())
+                ### XHR
+                elif directive == 'xhr':
+                        portlet.session.set('xhr', '1')
 
             else:
                 pass
@@ -255,11 +263,21 @@ class Marionet(Portlet):
         try:
             client = WebClient()
             ### select method and exec request
+            # GET
             if self.session.get('method') == 'GET':
                 response = client.get(self.url)
-            if self.session.get('method') == 'POST':
-                params = QueryDict(self.session.get('qs'))
-                response = client.post(self.url, params)
+            # POST
+            elif self.session.get('method') == 'POST':
+                response = client.post(self.url,
+                    params=self.session.get('qs'),
+                    xhr=self.session.get('xhr'))
+
+            if response.status != 200:
+                return '%s %s' % (response.status, response.reason)
+
+            # XXX: do not process XHR
+            if self.session.get('xhr') == 1:
+                return response.read()
 
             ### process the response . .
             #
@@ -338,14 +356,13 @@ class WebClient():
     def __init__(self,*args,**kwargs):
         """ Store cookies to the instance. """
         if 'cookies' in kwargs:
-            self.cookies = kwargs['cookies']
+            self.cookies = kwargs.pop('cookies')
         else:
             self.cookies = {}
 
         self.__config = httpclient.Configuration()
         self.__config.set_user_agent(
             '# Mozilla/5.0 (X11; U; Linux x86_64; en-US; rv:1.9.2) Gecko/20100130 Gentoo Firefox/3.6')
-        #config.set_trust_store("/path/to/verisign/ca.pem")
 
     def update_cookies(self,response):
         """ Update cookies from HTTP response header 'Set-Cookie'.
@@ -391,14 +408,25 @@ class WebClient():
         self.update_cookies(response) # updates state
         return response
 
-    def post(self,url,params={}):
-        """ Execute POST request.
-            Returns httplib.HTTPResponse.
+    def post(self,url,params='',xhr=False,**kwargs):
+        """ Executes POST request.
+
+            @param params is an urlencoded string.
+            @param xhr emulates XMLHttpRequest.
+            @returns httplib.HTTPResponse.
         """
         method = httpclient.PostMethod(url)
+        if xhr:
+            log.debug('emulating XMLHttpRequest')
+            method.add_request_header(
+                'X_REQUESTED_WITH', 'XMLHttpRequest')
+            method.add_request_header(
+                'ACCEPT', 'text/javascript, text/html, application/xml, text/xml, */*')
+            method.set_request_content_type(
+                'application/x-www-form-urlencoded; charset=UTF-8')
+
         # add parameters to request body
-        body = '&'.join(map(lambda (k,v): k+"="+v, params.items()))
-        method.set_body(body)
+        method.set_body(params)
         # add cookies
         method.add_request_header('Cookie',self.cookie_headers())
         # httpclient forgets cookies with automatic redirect..
@@ -411,7 +439,7 @@ class WebClient():
         self.update_cookies(response) # updates state
         # follow redirect..
         if response.status == 302 or response.status == 301:
-            return self.get(response.getheader('Location'))
+            return self.get(response.getheader('Location'), xhr=xhr)
         else:
             return response
 
@@ -511,7 +539,7 @@ class PageProcessor(Singleton):
         """ Parses the response HTML.
             In case the input is badly formatted HTML, the soupparser is used.
         """
-        html = response.read()
+        html = response.read() # XXX read() in static method XXX
         """
         log.debug(' # input HTML')
         log.debug(html)
