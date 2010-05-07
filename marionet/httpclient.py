@@ -406,7 +406,17 @@ class HttpMethodBase:
         @param uri: URI of the target resource.
         """
         self.__uri = uri
-    
+
+    def set_xmlhttprequest(self):
+        """Sets the method to appear like XMLHttpRequest.
+        """
+        self.set_request_header(
+            'X_REQUESTED_WITH', 'XMLHttpRequest')
+        self.set_request_header(
+            'ACCEPT', 'text/javascript, text/html, application/xml, text/xml, */*')
+        self.set_request_content_type(
+            'application/x-www-form-urlencoded; charset=UTF-8')
+
     
     # The proxy code in this was inspired by
     # http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/456195

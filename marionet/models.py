@@ -391,12 +391,18 @@ class WebClient():
         """
         return '; '.join(map(lambda f: f[0], self.cookies.values()))
 
-    def get(self,url,referer=None):
-        """ Execute GET request.
-            Returns httplib.HTTPResponse.
+    def get(self,url,referer=None,xhr=False):
+        """ Executes GET request.
+
+            @param xhr emulates XMLHttpRequest.
+            @returns httplib.HTTPResponse.
         """
         log.info('GET %s' % (url))
         method = httpclient.GetMethod(url)
+        if xhr:
+            log.debug('XMLHttpRequest GET')
+            method.set_xmlhttprequest()
+
         # add cookies
         method.set_request_header('Cookie',self.cookie_headers())
         if referer is not None:
@@ -408,7 +414,7 @@ class WebClient():
         self.update_cookies(response) # updates state
         return response
 
-    def post(self,url,params='',xhr=False,**kwargs):
+    def post(self,url,params='',xhr=False):
         """ Executes POST request.
 
             @param params is an urlencoded string.
@@ -417,13 +423,8 @@ class WebClient():
         """
         method = httpclient.PostMethod(url)
         if xhr:
-            log.debug('emulating XMLHttpRequest')
-            method.set_request_header(
-                'X_REQUESTED_WITH', 'XMLHttpRequest')
-            method.set_request_header(
-                'ACCEPT', 'text/javascript, text/html, application/xml, text/xml, */*')
-            method.set_request_content_type(
-                'application/x-www-form-urlencoded; charset=UTF-8')
+            log.debug('XMLHttpRequest POST')
+            method.set_xmlhttprequest()
 
         # add parameters to request body
         method.set_body(params)
