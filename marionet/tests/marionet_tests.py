@@ -243,6 +243,46 @@ class MarionetTestCase(TestCase):
         msg = portlet_div.find(id='post_msg')
         self.assertEqual(msg.text, params['msg'])
 
+    def test_xhr_post(self):
+        """ XHR POST
+        """
+        portlet = Marionet.objects.create(session=True)
+        href = self.junit_url+'/xhr_post'
+        ns = portlet.session.get('namespace')
+        query = QueryDict('')
+        query._mutable = True
+        query.__setitem__(ns+'.href', quote(href.encode('utf8')))
+        query.__setitem__(ns+'.action', 'process') # processAction
+        query.__setitem__(ns+'.xhr', True) # set XHR
+
+        path = '/page/1' + '?' + query.urlencode()
+        # POST params
+        params = {'msg': 'test message'}
+        request = RequestFactory().post(path, params)
+        context = RequestContext(request, [context_processors.render_ctx])
+        #self.assertEqual(context['xhr?'], False)
+
+        out = portlet.render(context)
+        self.assert_(out)
+
+        # test side effects
+        self.assertEqual(portlet.url, href)
+        self.assert_(portlet.session)
+        self.assertEqual(portlet.session.get('xhr'),'1')
+        location = portlet.session.get('location')
+        self.assertEqual(location, 'http://testserver:80/page/1')
+        # portlet query string
+        qs = portlet.session.get('qs')
+        self.assertEqual(qs, 'msg=test+message')
+
+        soup = BeautifulSoup(str(out))
+        self.assert_(soup)
+        # only body remains
+        self.assertEqual(soup.find().name, 'hash')
+        msg = soup.find(name='msg')
+        self.assert_(msg)
+        self.assertEqual(msg.text, params['msg'])
+
     def __test_render_url(self):
         pass
 
