@@ -6,19 +6,10 @@ It is written in Python for Django.
 Python 2.6 and Django 1.2 should be installed to the system.
 Older versions of Django need modifications to <tt>test/settings.py</tt>. Python 2.5 or older do not currently work.
 
-Install django-portlets via easy_install:
-  easy_install django-portlets
-
-OR
-
-Run the make command
+Install the lamikae fork of django-portlets[http://bitbucket.org/lamikae/django-portlets]:
   make portlets
-to download and update the source from mercurial at bitbucket. For this you need to install the Mercurial client.
-The command creates a symlink 'portlets' to the project root directory.
-
---
-Django-portlets can be found at http://bitbucket.org/lamikae/django-portlets
-++
+This downloads and updates the source from mercurial at bitbucket. For this you need to install the Mercurial client.
+The command creates a symlink 'portlets' to the project root directory. The <tt>easy_install</tt> version will not work.
 
 == Running the test portal
 The test portal consists of one view. Start the server
