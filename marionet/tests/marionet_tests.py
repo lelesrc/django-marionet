@@ -349,7 +349,7 @@ class MarionetTestCase(TestCase):
         #print pref.portlet
 
     def test_marionet_session1(self):
-        """ PortletSession callback
+        """ PortletSession namespace and baseURL
         """
         """
         portlet = Marionet.objects.create(
@@ -482,27 +482,14 @@ class MarionetTestCase(TestCase):
         session = MarionetSession.objects.create()
         self.assert_(session)
         self.assertEqual(session.user, None)
+        self.assert_(session.id)
 
         c = Client()
         portlet = Marionet.objects.create(url=self.junit_url, session=True)
+        self.assert_(portlet.session.id)
         response = c.get('/marionet/%s/' % portlet.id)
         self.assertEqual(response.status_code, 200)
         # XXX: test bench session
-
-
-    '''
-    def test_registered_portlet(self):
-        c = Client()
-        #response = c.post('/login/', {'username': 'john', 'password': 'smith'})
-        #print response.status_code
-
-        response = c.get('/test_bench/')
-        self.assertEqual(response.status_code, 200)
-        soup = BeautifulSoup(response.content)
-        self.assert_(soup)
-        #print soup.html
-    '''
-
 
     def test_xhr_marionet1(self):
         """ Django receives XHR, portlet GET
