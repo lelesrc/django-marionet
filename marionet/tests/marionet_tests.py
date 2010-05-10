@@ -315,19 +315,6 @@ class MarionetTestCase(TestCase):
         out = portlet.render(context)
         self.assertEqual(portlet.url, href)
 
-    def test_preferences(self):
-        portlet = Marionet.objects.create(url = self.junit_url)
-        pref = PortletPreferences.objects.create(portlet=portlet)
-        self.assert_(pref)
-        elem = pref.elem()
-        self.assertEqual(elem.__class__, lxml.etree._Element)
-        self.assertEqual(elem.get('portlet_id'),
-            str(portlet.id))
-        self.assertEqual(elem.get('instance_id'),
-            '1_INSTANCE_1')
-        self.assert_(pref.tag())
-        #print pref.portlet
-
     def test_marionet_session1(self):
         """ PortletSession namespace and baseURL
         """

@@ -30,25 +30,6 @@ from posixpath import normpath
 from copy import copy
 
 
-class PortletPreferences(models.Model):
-    """ A portlet instance for the user, who has set specific preferences.
-        XXX: is this really needed?
-    """
-    portlet = models.ForeignKey('Marionet')
-
-    def instance_id(self):
-        return '%s_INSTANCE_%s' % (self.portlet.id, self.id)
-
-    def elem(self):
-        elem = etree.Element("portlet-preferences")
-        elem.set('portlet_id', '%s' % (self.portlet.id))
-        elem.set('instance_id', '%s' % (self.instance_id()))
-        return elem
-
-    def tag(self):
-        return etree.tostring(self.elem())
-
-
 class PortletURL():
     """
     Liferay example:
