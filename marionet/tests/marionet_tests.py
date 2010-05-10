@@ -92,22 +92,6 @@ class MarionetTestCase(TestCase):
         self.assert_(portlet)
         # XXX
 
-    def test_render_context_processor(self):
-        """ Context preprocessor
-        """
-        path = '/page/1'
-        request = RequestFactory().get(path)
-        context = RequestContext(request)
-        # render to call context preprocessor
-        portlet = Marionet.objects.create(url=self.junit_url, session=True)
-        portlet.render(context)
-
-        location = context.get('location')
-        self.assert_(location)
-        self.assertEqual(location.scheme, 'http')
-        self.assertEqual(location.netloc, 'testserver:80')
-        self.assertEqual(location.path, path)
-
     def test_render(self):
         """ Basic GET
         """
@@ -476,10 +460,10 @@ class MarionetTestCase(TestCase):
         """
         _session_key = 'xTZsrE3fd5f'
         portlet = Marionet.objects.create(url='', session=False)
-        (session,created) = MarionetSession.objects.get_or_create(portlet=portlet,key=_session_key)
+        (session,created) = MarionetSession.objects.get_or_create(portlet=portlet,django_key=_session_key)
         self.assert_(created)
         self.assertEqual(session.user, None)
-        self.assertEqual(session.key, _session_key)
+        self.assertEqual(session.django_key, _session_key)
         self.assert_(session.id)
 
     def test_marionet_session_user(self):
@@ -490,14 +474,14 @@ class MarionetTestCase(TestCase):
         (session,created) = MarionetSession.objects.get_or_create(portlet=portlet,user=user)
         self.assert_(created)
         self.assertEqual(session.user, user)
-        self.assertEqual(session.key, None)
+        self.assertEqual(session.django_key, None)
         self.assert_(session.id)
         session_id = session.id
 
         (session,created) = MarionetSession.objects.get_or_create(portlet=portlet,user=user)
         self.assert_(not created)
         self.assertEqual(session.user, user)
-        self.assertEqual(session.key, None)
+        self.assertEqual(session.django_key, None)
         self.assertEqual(session.id, session_id)
 
     def __test_session_id(self,client):
