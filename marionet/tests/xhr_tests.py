@@ -1,11 +1,16 @@
 # -*- coding: utf-8 -*-
 
 from django.test import TestCase
+from django.template import RequestContext
 import signal
 
 from PyQt4.QtCore import SIGNAL, QObject, QUrl, QString, QTimer
 from PyQt4.QtGui import QApplication
 from PyQt4.QtWebKit import *
+
+from marionet import context_processors
+from marionet.models import Marionet
+from marionet.tests.utils import RequestFactory
 
 from BeautifulSoup import BeautifulSoup
 
@@ -26,6 +31,8 @@ class XHRTestCase(TestCase):
         signal.signal( signal.SIGINT, signal.SIG_DFL )
         self.xUnit_url = 'http://localhost:3000/caterpillar/test_bench/junit/'
 
+    def tearDown(self):
+        QT_APP.quit
 
     def test_javascript(self):
         """
@@ -108,6 +115,39 @@ class XHRTestCase(TestCase):
         html = page.mainFrame().toHtml()
         soup = BeautifulSoup(str(html))
         self.assertEquals('Hello World!',soup.find(id='form_resp').text)
+
+    def test_marionet_xhr_form_post(self):
+        self.fail('hangs test suite')
+        portlet = Marionet.objects.create(url=self.xUnit_url + 'form',session=True)
+        path = '/page/1'
+        request = RequestFactory().get(path)
+        context = RequestContext(request, [context_processors.render_ctx])
+        portlet_render = portlet.render(context)
+        print portlet_render
+
+        page = QWebPage()
+        page.mainFrame().setHtml("""
+        <html>
+          <head>
+          <script type="text/javascript" src="/javascripts/jquery-1.4.2.min.js"></script>
+          </head>
+          <body>
+          %s
+          </body>
+        </html>
+        """ % portlet_render, QUrl( 'http://localhost:3000' ))
+        # connect the signal to quit the application after the page is loaded
+        page.connect( page, SIGNAL( 'loadFinished(bool)' ), QT_APP.quit )
+        # start the application to load external JS
+        QT_APP.exec_()
+        # submit form
+        evaluateJavaScript(page.mainFrame(), """
+        $$('#ordinary_post form').first().commit.click();
+        """)
+        html = page.mainFrame().toHtml()
+        soup = BeautifulSoup(html)
+        #print soup.html
+        self.fail('http://testserver:80/ does not respond to submit')
 
 
 def evaluateJavaScript(frame, script):
