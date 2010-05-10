@@ -365,13 +365,24 @@ class MarionetSession(PortletSession):
         so a single portlet can be created on the page,
         and all users accessing have their own session.
     """
-    user = models.ForeignKey(User, null=True, unique=True)
+    # user is not necessary, and each user may have multiple sessions
+    user = models.ForeignKey(User, null=True, unique=False)
+    # portlet is not necessary, if initialized with url kwarg.
     portlet = models.ForeignKey(Marionet, null=True)
-    cookie = '' # TODO: store to database
+    # key is needed to identify, if user is not set.
+    key = models.CharField(null=True, blank=True, max_length=42, unique=False)
 
     def __unicode__(self):
-        return 'MarionetSession %s for user %s with marionet %s ' % (
-            self.id, self.user_id, self.portlet_id)
+        return 'MarionetSession %s for user %s (key %s) with marionet %s ' % (
+            self.id, self.user, self.key, self.portlet_id)
+
+    def clean(self):
+        """ Validation.
+        """
+        #from django.core.exceptions import ValidationError
+        if not self.user and not self.key:
+            #raise ValidationError('No user nor key.')
+            self.key = 'anon_shared'
 
 
 class WebClient():

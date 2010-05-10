@@ -440,7 +440,6 @@ class MarionetTestCase(TestCase):
         self.assertEqual(portlet.session, None)
         session = MarionetSession(user=user,portlet=portlet)
         self.assert_(session)
-        print session
         self.assertEqual(session.user, user)
         self.assertEqual(session.portlet, portlet)
         self.assertEqual(portlet.session, None) # no side effects
@@ -477,16 +476,20 @@ class MarionetTestCase(TestCase):
         self.assertEqual(session.get('url'), 'http://example.com')
 
     def test_marionet_session7(self):
-        """ MarionetSession for anonymous user
+        """ MarionetSession with key
         """
-        session = MarionetSession.objects.create()
+        _session_key = 'xTZsrE3fd5f'
+        session = MarionetSession.objects.create(key=_session_key)
         self.assert_(session)
         self.assertEqual(session.user, None)
+        self.assertEqual(session.key, _session_key)
         self.assert_(session.id)
 
+    def test_marionet_session8(self):
+        """ MarionetSession for anonymous user
+        """
         c = Client()
         portlet = Marionet.objects.create(url=self.junit_url, session=True)
-        self.assert_(portlet.session.id)
         response = c.get('/marionet/%s/' % portlet.id)
         self.assertEqual(response.status_code, 200)
         # XXX: test bench session

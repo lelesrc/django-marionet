@@ -75,8 +75,17 @@ def marionet(request,portlet_id):
     """
     portlet =  Marionet.objects.get(id=portlet_id)
     # portlet has no session
-    log.debug(' --> fetch session for user '+str(request.user))
-    session, created = MarionetSession.objects.get_or_create(portlet=portlet,user=request.user)
+    if not request.user.__dict__:
+        request.session.save()
+        log.debug(' --> fetch session for key '+str(request.session._session_key))
+        session, created = MarionetSession.objects.get_or_create(
+            portlet=portlet,
+            key=request.session._session_key)
+    else:
+        log.debug(' --> fetch session for user '+str(request.user))
+        session, created = MarionetSession.objects.get_or_create(
+            portlet=portlet,
+            user=request.user)
     if not session:
         log.warn('oops, could not fetch session')
         return HttpResponse("FAIL",status=500)
