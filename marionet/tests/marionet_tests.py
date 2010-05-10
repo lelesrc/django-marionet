@@ -266,55 +266,6 @@ class MarionetTestCase(TestCase):
         self.assert_(msg)
         self.assertEqual(msg.text, params['msg'])
 
-    def __test_render_url(self):
-        pass
-
-    def test_render_url__no_href(self):
-        path = '/page/1'
-        request = RequestFactory().get(path)
-        portlet_url = self.junit_url
-        portlet = Marionet.objects.create(url=portlet_url, session=True)
-
-        context = RequestContext(request, [context_processors.render_ctx])
-        # render portlet with the context
-        portlet.render(context)
-        render_url = portlet.render_url(href=None)
-        self.assertEqual(render_url(), 'http://testserver:80/page/1')
-
-    def test_portlet_url__get1(self):
-        """ render url, single portlet
-        """
-        path = '/page/1'
-        request = RequestFactory().get(path)
-        context = RequestContext(request, [context_processors.render_ctx])
-        portlet_url = self.junit_url
-        href = portlet_url + '/target1'
-        portlet = Marionet.objects.create(url=portlet_url, session=True)
-
-        # give portlet the context
-        portlet.render(context)
-        # ..now we have the render url
-        render_url = portlet.render_url(href)
-
-        # render
-        _url = render_url()
-        #print _url
-        request = RequestFactory().get(_url)
-        context = RequestContext(request, [context_processors.render_ctx])
-
-        qs = request.META['QUERY_STRING']
-        #print qs
-        self.assert_(
-            re.match(
-                portlet.session.get('namespace'),
-                qs
-                ),
-            '%s has no portlet namespace' % (qs)
-            )
-
-        out = portlet.render(context)
-        self.assertEqual(portlet.url, href)
-
     def test_marionet_session1(self):
         """ PortletSession namespace and baseURL
         """

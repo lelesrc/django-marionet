@@ -306,25 +306,6 @@ class Marionet(Portlet):
             logging.error(traceback.format_exc())
             return "ERROR"
 
-    def render_url(self, href, params={}):
-        """ Returns a PortletURL.render_url.
-            Call the result object to get string representation of the url.
-            XXX: is this needed?
-        """
-        logging.debug(self.session)
-        return PortletURL.render_url(
-            method    = 'GET',
-            location  = self.context.get('location'),
-            query     = self.context.get('query'),
-            href      = href,
-            params    = params,
-            namespace = self.session.get('namespace'),
-            )
-
-    def action_url(self, href, params={}):
-        ''' UNIMPLEMENTED '''
-        pass
-        
     def form(self, **kwargs):
         """
         """
