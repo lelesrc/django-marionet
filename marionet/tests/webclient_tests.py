@@ -3,12 +3,8 @@
 from django.http import QueryDict
 from django.test import TestCase
 
-from marionet import log
 from marionet.models import Marionet, PortletFilter
 from marionet.models import WebClient
-
-from test.settings import TEST_LOG_LEVEL
-log.setlevel(TEST_LOG_LEVEL)
 
 import libxml2
 from copy import copy

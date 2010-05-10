@@ -3,11 +3,8 @@
 
 from django.test import TestCase
 
-from marionet import log
 from marionet.models import Marionet, WebClient, PageProcessor, MarionetSession
 from marionet.tests.utils import RequestFactory
-from test.settings import TEST_LOG_LEVEL
-log.setlevel(TEST_LOG_LEVEL)
 
 from lxml import etree
 from BeautifulSoup import BeautifulSoup
@@ -313,7 +310,7 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual(
             link.get('href'),
             'http://example.com:8000/some-page?__portlet__.href=http%3A//localhost%3A3000/caterpillar/test_bench')
-        print etree.tostring(link)
+        #print etree.tostring(link)
 
     def test_form(self):
         # XSLT returns this form

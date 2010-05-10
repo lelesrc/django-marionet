@@ -17,12 +17,9 @@ from portlets.models import Slot
 from portlets.models import PortletSession
 import portlets.utils
 
-from marionet import log
 from marionet import context_processors
 from marionet.models import *
 from marionet.tests.utils import RequestFactory
-from test.settings import TEST_LOG_LEVEL
-log.setlevel(TEST_LOG_LEVEL)
 
 from urlparse import urlparse, urlunparse, urlunsplit, urljoin
 from urllib import quote, unquote
@@ -68,7 +65,6 @@ class MarionetTestCase(TestCase):
         self.assert_(portlet.session)
         self.assertEqual(portlet.session.id,session.id)
         self.assertEqual(portlet.url, self.junit_url)
-        print portlet.session
         self.assertEqual(portlet.session.get('title'), 'test portlet')
         self.assertEqual(portlet.session.get('baseURL'), self.junit_base)
         del(portlet)
@@ -533,7 +529,6 @@ class MarionetTestCase(TestCase):
         self.assertEqual(len(portlets), 1)
         portlet_div = portlets[0]
         self.assert_(portlet_div)
-        print portlet_div
         self.assertEqual(portlet_div.find('div').text, 'false')
 
     def test_xhr_marionet2(self):
@@ -553,7 +548,6 @@ class MarionetTestCase(TestCase):
         self.assertEqual(len(portlets), 1)
         portlet_div = portlets[0]
         self.assert_(portlet_div)
-        print portlet_div
         self.assertEqual(portlet_div.text, 'true')
 
     '''

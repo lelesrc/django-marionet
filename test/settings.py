@@ -16,14 +16,13 @@ import django.conf.global_settings as DEFAULT_SETTINGS
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
-from marionet import log
-if DEBUG:
-	log.setlevel('info')
-else:
-	log.setlevel('debug')
-#TEST_LOG_LEVEL = 'debug'
-TEST_LOG_LEVEL = 'critical'
-
+import logging
+logging.basicConfig(
+    level = logging.DEBUG,
+    format = '%(asctime)s %(levelname)s %(message)s',
+    filename = 'marionet.log',
+    filemode = 'w'
+)
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 MEDIA_ROOT = os.path.join(PROJECT_ROOT, 'media')
 MEDIA_URL = '/media/'
@@ -56,3 +55,4 @@ SITE_ID = 1
 TEMPLATE_CONTEXT_PROCESSORS = DEFAULT_SETTINGS.TEMPLATE_CONTEXT_PROCESSORS + (
     'marionet.context_processors.render_ctx',
 )
+

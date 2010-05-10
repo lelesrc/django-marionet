@@ -12,11 +12,8 @@ from urlparse import urlparse, urlunparse, urlunsplit, urljoin
 from cgi import parse_qs
 from urllib import quote, unquote
 
-from marionet import log
 from marionet.models import *
 from marionet.tests.utils import RequestFactory
-from test.settings import TEST_LOG_LEVEL
-log.setlevel(TEST_LOG_LEVEL)
 
 
 class PortletURLTestCase(TestCase):

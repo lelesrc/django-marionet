@@ -16,10 +16,10 @@ from urlparse import urlparse, urlunparse, urlsplit, urlunsplit, urljoin, ParseR
 from cgi import parse_qs
 from urllib import quote, unquote
 
-from marionet import log
+import logging
 
 def render_ctx(request):
-    log.debug(' - - - render context preprocessor')
+    logging.debug(' - - - render context preprocessor')
     location = ParseResult(
         'http',
         '%s:%s' % (request.META['SERVER_NAME'], request.META['SERVER_PORT']),
@@ -28,11 +28,11 @@ def render_ctx(request):
         '', # request.META['QUERY_STRING'], # no query string here!
         ''
         )
-    log.debug('location: '+urlunparse(location))
+    logging.debug('location: '+urlunparse(location))
     query = request.GET
-    log.debug('query: ' + str(query))
+    logging.debug('query: ' + str(query))
     post = request.POST
-    log.debug('POST: '+str(post))
+    logging.debug('POST: '+str(post))
     
     return {
         'location': location, # ParseResult

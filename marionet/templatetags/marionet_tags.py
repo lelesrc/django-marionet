@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 #
 
+import logging
+
 from django import template
 
 from portlets.models import Portlet
 from portlets.utils import register_portlet
 
-from marionet import log
 from marionet.models import Marionet
-from test.settings import TEST_LOG_LEVEL
-log.setlevel(TEST_LOG_LEVEL)
 
 register = template.Library()
 
@@ -20,10 +19,10 @@ register = template.Library()
 def marionet_render(context,portlet):
     """ Portlet with funny CSS.
     """
-    log.debug(" % % % render tag")
+    logging.debug(" % % % render tag")
     content = portlet.render(context)
     title = portlet.title
-    log.debug("rendering portlet: %s" % (portlet))
+    logging.debug("rendering portlet: %s" % (portlet))
     return {
         'title': title,
         'content': content,
@@ -34,13 +33,13 @@ def marionet_render(context,portlet):
 def marionet_portletRequest(context,url):
     """ 
     """
-    #log.debug("marionet context: %s" % (context))
-    log.debug("request new url")
-    log.debug(url)
+    #logging.debug("marionet context: %s" % (context))
+    logging.debug("request new url")
+    logging.debug(url)
     return {}
     """
     portlet = Marionet(url=url)
-    log.debug("marionet portlet: %s" % (portlet))
+    logging.debug("marionet portlet: %s" % (portlet))
     return {
         'portlet': portlet
     }

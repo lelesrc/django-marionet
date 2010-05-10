@@ -15,8 +15,7 @@ from portlets.utils import register_portlet
 
 from portlets.models import PortletSession
 
-from marionet import log, Config
-
+import logging
 import re
 import httpclient
 import traceback
@@ -74,7 +73,7 @@ class PortletURL():
                 k,quote(v.encode('utf8'))),
                 self.query.items()))
         if self.location is None:
-            log.warn('portlet context has no location')
+            logging.warn('portlet context has no location')
             url = '?'+qs
         else:
             url = urlunsplit((
@@ -98,19 +97,19 @@ class PortletURL():
         """ location = ParseResult
             query = QueryDict
         """
-        log.debug('portlet href: %s' % (href))
-        log.debug(location)
+        logging.debug('portlet href: %s' % (href))
+        logging.debug(location)
         if href is None:
             return PortletURL(location, query)
         if namespace is None:
-            log.warn('Portlet namespace is undefined')
+            logging.warn('Portlet namespace is undefined')
             return PortletURL(location, query)
 
         # append portlet parameters to query
         # - since query is immutable, create a copy if needed
         _query = copy(query)
         _query.__setitem__(namespace+'.href', href)
-        log.debug('context query: %s' % (_query))
+        logging.debug('context query: %s' % (_query))
 
         return PortletURL(location, _query)
 
@@ -126,12 +125,12 @@ class PortletURL():
         """ @param location = ParseResult
             @param query = QueryDict
         """
-        log.debug('action href: %s' % (href))
-        log.debug(location)
+        logging.debug('action href: %s' % (href))
+        logging.debug(location)
         if href is None:
             return PortletURL(location, query)
         if namespace is None:
-            log.warn('Portlet namespace is undefined')
+            logging.warn('Portlet namespace is undefined')
             return PortletURL(location, query)
 
         # append portlet parameters to query
@@ -139,7 +138,7 @@ class PortletURL():
         _query = copy(query)
         _query.__setitem__(namespace+'.href', href)
         _query.__setitem__(namespace+'.action', 'process')
-        log.debug('context query: %s' % (_query))
+        logging.debug('context query: %s' % (_query))
 
         return PortletURL(location, _query)
 
@@ -163,7 +162,7 @@ class PortletFilter():
         def do_filter(portlet, context):
             """ Prepares the portlet by preprocessed context
             """ 
-            log.debug(' * * * render filter activated')
+            logging.debug(' * * * render filter activated')
             #
             ### session defaults
             #
@@ -180,7 +179,7 @@ class PortletFilter():
                 match = re.match('%s\.(.*)' % namespace, key)
                 if match is not None:
                     directive = match.group(1)
-                    log.debug(' * '+namespace+' '+directive)
+                    logging.debug(' * '+namespace+' '+directive)
                     ### set URL
                     if directive == 'href':
                         href = query.__getitem__(key)
@@ -189,10 +188,10 @@ class PortletFilter():
                         url = PageProcessor.href(None,href,base)
                         # update portlet
                         portlet.url = unquote(url)
-                        log.debug('new url: %s' % (portlet.url))
+                        logging.debug('new url: %s' % (portlet.url))
                     elif directive == 'action':
                         action = query.__getitem__(key)
-                        log.debug('portlet action '+action)
+                        logging.debug('portlet action '+action)
                         ### POST
                         if action == 'process':
                             portlet.session.set('method', 'POST')
@@ -204,7 +203,7 @@ class PortletFilter():
 
             else:
                 pass
-                #log.debug('no query parameters')
+                #logging.debug('no query parameters')
 
             return view_func(portlet,context)
 
@@ -225,14 +224,14 @@ class Marionet(Portlet):
     session = None
 
     def __init__(self, *args, **kwargs):
-        #log.debug('initializing marionet: '+str(kwargs))
+        #logging.debug('initializing marionet: '+str(kwargs))
         if 'session' in kwargs:
             session = kwargs.pop('session')
             if isinstance(session, PortletSession):
-                log.debug('marionet ~ prepared session')
+                logging.debug('marionet ~ prepared session')
                 self.session = session
             elif session is True:
-                log.debug('marionet ~ new session')
+                logging.debug('marionet ~ new session')
                 # session requested, create volatile
                 self.session = MarionetSession(*args,**kwargs)
         super(Marionet, self).__init__(
@@ -253,9 +252,9 @@ class Marionet(Portlet):
                     self.session.set('baseURL',
                         '%s://%s' % (_url.scheme, _url.netloc))
 
-        log.info(self.__unicode__())
-        #log.info("Marionet %s: %s, session %s" % (self.id,self.url,self.session.name))
-        #log.info(self.session)
+        logging.info(self.__unicode__())
+        #logging.info("Marionet %s: %s, session %s" % (self.id,self.url,self.session.name))
+        #logging.info(self.session)
 
     def __unicode__(self):
         if self.session:
@@ -272,8 +271,8 @@ class Marionet(Portlet):
             is inserted to the page before rendering, thus the title
             is empty...
         """
-        log.info(" * * * render * "+self.url)
-        #log.debug('context: %s' % (context))
+        logging.info(" * * * render * "+self.url)
+        #logging.debug('context: %s' % (context))
 
         ### update session
         # context location
@@ -284,7 +283,7 @@ class Marionet(Portlet):
         if context['query'] is not None:
             self.session.set('query',
                 context['query'].urlencode())
-        #log.debug(self.session)
+        #logging.debug(self.session)
 
         try:
             client = WebClient()
@@ -320,11 +319,11 @@ class Marionet(Portlet):
             if not self.title:
                 if self.session.get('title'):
                     self.title = self.session.get('title')
-                    log.info('title: '+self.title)
-            log.info('Page length: %i bytes' % (len(out)))
+                    logging.info('title: '+self.title)
+            logging.info('Page length: %i bytes' % (len(out)))
             return out
         except:
-            log.error(traceback.format_exc())
+            logging.error(traceback.format_exc())
             return "ERROR"
 
     def render_url(self, href, params={}):
@@ -332,7 +331,7 @@ class Marionet(Portlet):
             Call the result object to get string representation of the url.
             XXX: is this needed?
         """
-        log.debug(self.session)
+        logging.debug(self.session)
         return PortletURL.render_url(
             method    = 'GET',
             location  = self.context.get('location'),
@@ -416,7 +415,7 @@ class WebClient():
             for cookie in map(lambda f: f.split('; '), server_cookies.split(', ')):
                 name = cookie[0].split('=')[0]
                 self.cookies[name] = cookie
-            log.debug("Stored %i cookies: %s" % (len(self.cookies),self.cookies))
+            logging.debug("Stored %i cookies: %s" % (len(self.cookies),self.cookies))
 
     def add_cookies(self,cookies):
         """ Add cookies from dict.
@@ -434,17 +433,17 @@ class WebClient():
 
             @returns httplib.HTTPResponse.
         """
-        log.info('GET %s' % (url))
+        logging.info('GET %s' % (url))
         method = httpclient.GetMethod(url,**kwargs)
 
         # add cookies
         method.set_request_header('Cookie',self.cookie_headers())
 #        if referer is not None:
 #            method.set_request_header('Referer',referer) # XXX
-        #log.debug(method.getheaders())
+        #logging.debug(method.getheaders())
         method.execute()
         response = method.get_response()
-        #log.debug(response.getheaders())
+        #logging.debug(response.getheaders())
         self.update_cookies(response) # updates state
         return response
 
@@ -462,10 +461,10 @@ class WebClient():
         method.set_request_header('Cookie',self.cookie_headers())
         # httpclient forgets cookies with automatic redirect..
         method.set_follow_redirects(0)
-        #log.debug(method.getheaders())
+        #logging.debug(method.getheaders())
         method.execute()
         response = method.get_response()
-        #log.debug(response.getheaders())
+        #logging.debug(response.getheaders())
         # server redirect does not echo sent cookies, but may set new ones
         self.update_cookies(response) # updates state
         # follow redirect..
@@ -495,7 +494,7 @@ class PageProcessor(Singleton):
     def __body_xslt(self):
         """ Define body transformation stylesheet.
         """
-        log.debug('define xslt - this message should only appear at startup')
+        logging.debug('define xslt - this message should only appear at startup')
         return etree.XML('''\
 <xsl:stylesheet version="1.0"
      xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -580,22 +579,22 @@ class PageProcessor(Singleton):
         """
         html = response.read() # XXX read() in static method XXX
         """
-        log.debug(' # input HTML')
-        log.debug(html)
-        log.debug(' # # #')
+        logging.debug(' # input HTML')
+        logging.debug(html)
+        logging.debug(' # # #')
         """
         try:
             root = etree.fromstring(html).getroottree()
         except lxml.etree.XMLSyntaxError:
-            log.debug(traceback.format_exc())
-            log.warn("badly structured HTML - using slower fallback parser")
+            logging.debug(traceback.format_exc())
+            logging.warn("badly structured HTML - using slower fallback parser")
             root = lxml.html.soupparser.fromstring(html).getroottree()
 
         """
-        log.debug(' # parsed tree')
-        log.debug(root.__class__)
-        log.debug(etree.tostring(root))
-        log.debug(' # # #')
+        logging.debug(' # parsed tree')
+        logging.debug(root.__class__)
+        logging.debug(etree.tostring(root))
+        logging.debug(' # # #')
         """
         return root
 
@@ -619,7 +618,7 @@ class PageProcessor(Singleton):
         m = re.search('{(.*)}', root.getroot().tag ) # hackish ..
         if m:
             xmlns = m.group(1)
-            #log.debug('xmlns: '+xmlns)
+            #logging.debug('xmlns: '+xmlns)
         else:
             xmlns = ''
         #
@@ -627,7 +626,7 @@ class PageProcessor(Singleton):
         #
         head = root.find('{%s}head' % xmlns)
         if head is None:
-            log.warn('OOPS no head!')
+            logging.warn('OOPS no head!')
             # create new head into root
             head = etree.Element('head')
             root.getroot().append(head)
@@ -637,7 +636,7 @@ class PageProcessor(Singleton):
         head_base = head.find('base')
         if head_base is not None:
             base = head_base.get('href')
-            log.debug('found head base %s' % (base))
+            logging.debug('found head base %s' % (base))
             session.set('baseURL', base)
         #
         # title
@@ -663,9 +662,9 @@ class PageProcessor(Singleton):
         head.append(session._Element)
 
         """
-        log.debug(' # new head')
-        log.debug(etree.tostring(head))
-        log.debug(' # # #')
+        logging.debug(' # new head')
+        logging.debug(etree.tostring(head))
+        logging.debug(' # # #')
         """
         return root
 
@@ -674,7 +673,7 @@ class PageProcessor(Singleton):
         """ Performs XSL transformation to HTML tree using sheet.
             @returns lxml.etree._XSLTResultTree
         """
-        #log.debug(sheet+' xslt')
+        #logging.debug(sheet+' xslt')
         xslt_tree = PageProcessor.getInstance().sheets[sheet]
         return etree.XSLT(xslt_tree)(
             html_tree,
@@ -690,7 +689,7 @@ class PageProcessor(Singleton):
 
             @returns tuple (body,metadata)
         """
-        #log.debug('processing response for portlet %s' % (portlet))
+        #logging.debug('processing response for portlet %s' % (portlet))
         tree = PageProcessor.parse_tree(html)
 
         # add portlet metadata
@@ -701,9 +700,9 @@ class PageProcessor(Singleton):
         #
         html = str(PageProcessor.transform(tree,**kwargs))
         """
-        log.debug(' # portlet html')
-        log.debug(html)
-        log.debug(' # # #')
+        logging.debug(' # portlet html')
+        logging.debug(html)
+        logging.debug(' # # #')
         """
         return html
 
@@ -716,7 +715,7 @@ class PageProcessor(Singleton):
         
             TODO: test "javascript:" and "#"
         """
-        log.debug('anchor: %s' % etree.tostring(anchor[0]))
+        logging.debug('anchor: %s' % etree.tostring(anchor[0]))
 
         href = anchor[0].get('href')
         if not href:
@@ -740,7 +739,7 @@ class PageProcessor(Singleton):
 
     @staticmethod
     def form(obj,form,location,query,namespace,base=None):
-        log.debug('form: %s' % etree.tostring(form[0]))
+        logging.debug('form: %s' % etree.tostring(form[0]))
         action = form[0].get('action')
         if not action:
             return form
@@ -763,29 +762,29 @@ class PageProcessor(Singleton):
     def href(obj,href,base=None):
         """ Parses base into href to form a complete url.
         """
-        log.debug('parsing href "%s"' % (href))
+        logging.debug('parsing href "%s"' % (href))
         if base and not re.match('^http', href):
-            #log.debug('base: %s' % (base))
+            #logging.debug('base: %s' % (base))
             """
             if re.match('^/', href):
-                log.debug('absolute path')
+                logging.debug('absolute path')
                 baseurl = urlparse(base)
                 return urljoin(base+'/',href)
             else:
             """
-            #log.debug('relative path')
+            #logging.debug('relative path')
             join = urljoin(base+'/',href)
             _url = re.sub('(?<!:)//', '/', join)
-            #log.debug(_url)
+            #logging.debug(_url)
             return _url
         else:
-            log.warn('portlet has no base')
+            logging.warn('portlet has no base')
             return href
 
     @staticmethod
     def image(obj,img,base=None):
         """ Alters the img tag. """
-        #log.debug('image: %s' % etree.tostring(img[0]))
+        #logging.debug('image: %s' % etree.tostring(img[0]))
         src = img[0].get('src')
         url = PageProcessor.href(None,src,base)
         img[0].set('src',url)

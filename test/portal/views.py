@@ -4,6 +4,7 @@
 # python imports
 import sys
 import traceback
+import logging
 
 # django imports
 from django import template
@@ -30,7 +31,7 @@ from portlets.models import PortletBlocking
 from portlets.models import PortletRegistration
 from portlets.models import Slot
 
-from marionet.models import Marionet, log
+from marionet.models import Marionet
 from marionet.models import MarionetSession
 
 def index(request):
@@ -41,7 +42,7 @@ def test_bench(request):
     portlet =  Marionet.objects.create(
         url="http://localhost:3000/caterpillar/test_bench/",
         )
-    log.debug(portlet)
+    logging.debug(portlet)
     return render_to_response("url.html", {
         "portlet" : portlet,
         },
@@ -63,7 +64,7 @@ def test_bench_xhr(request):
     portlet =  Marionet.objects.create(
         url="http://localhost:3000/caterpillar/test_bench/junit/xhr_post",
         )
-    log.debug(portlet)
+    logging.debug(portlet)
     return render_to_response("url.html", {
         "portlet" : portlet,
         },
@@ -77,24 +78,24 @@ def marionet(request,portlet_id):
     # portlet has no session
     if not request.user.__dict__:
         request.session.save()
-        log.debug(' --> fetch session for key '+str(request.session._session_key))
+        logging.debug(' --> fetch session for key '+str(request.session._session_key))
         session, created = MarionetSession.objects.get_or_create(
             portlet=portlet,
             key=request.session._session_key)
     else:
-        log.debug(' --> fetch session for user '+str(request.user))
+        logging.debug(' --> fetch session for user '+str(request.user))
         session, created = MarionetSession.objects.get_or_create(
             portlet=portlet,
             user=request.user)
     if not session:
-        log.warn('oops, could not fetch session')
+        logging.warn('oops, could not fetch session')
         return HttpResponse("FAIL",status=500)
 
     # attach volatile session
     portlet.session = session
 
-    log.debug(session)
-    #log.info(portlet)
+    logging.debug(session)
+    #logging.info(portlet)
     return render_to_response("url.html", {
         "portlet" : portlet,
         },
