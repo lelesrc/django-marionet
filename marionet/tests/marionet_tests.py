@@ -485,14 +485,37 @@ class MarionetTestCase(TestCase):
         self.assertEqual(session.key, _session_key)
         self.assert_(session.id)
 
-    def test_marionet_session8(self):
-        """ MarionetSession for anonymous user
-        """
-        c = Client()
-        portlet = Marionet.objects.create(url=self.junit_url, session=True)
-        response = c.get('/marionet/%s/' % portlet.id)
+    def __test_session_id(self,client):
+        portlet = Marionet.objects.create(url=self.junit_url+'/session_cookie', session=True)
+        response = client.get('/marionet/%s/' % portlet.id)
         self.assertEqual(response.status_code, 200)
-        # XXX: test bench session
+        soup = BeautifulSoup(response.content)
+        self.assert_(soup)
+        portlets = soup.findAll('div', {'class': 'marionet_content'})
+        session_id = portlets[0].find('hash').find('id').text
+
+        # request again!
+        response = client.get('/marionet/%s/' % portlet.id)
+        self.assertEqual(response.status_code, 200)
+        soup = BeautifulSoup(response.content)
+        self.assert_(soup)
+        portlets = soup.findAll('div', {'class': 'marionet_content'})
+        _session_id = portlets[0].find('hash').find('id').text
+
+        self.assertEqual(session_id, _session_id)
+
+    def test_marionet_session8(self):
+        """ MarionetSession and cookies for anonymous user
+        """
+        self.__test_session_id(Client())
+
+    def test_marionet_session9(self):
+        """ MarionetSession and cookies for registered user
+        """
+        user = User.objects.create_user(username="toejam", email="toejam@funkotron", password="jammin")
+        c = Client()
+        login = c.login(username='toejam', password='jammin')
+        self.__test_session_id(c)
 
     def test_xhr_marionet1(self):
         """ Django receives XHR, portlet GET
