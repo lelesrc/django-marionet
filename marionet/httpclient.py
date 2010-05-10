@@ -343,13 +343,27 @@ class HttpMethodBase:
     __visited_redirections = set()
     __do_authentication = True
     __proxy = None
-    def __init__(self, uri=None):
+    def __init__(self, uri=None, **kwargs):
         """Constructs an HTTP method.
         @param uri: URI of the method
+        @param headers: extra HTTP headers, keyword 'xhr' adds XMLHttpRequest headers
         """
         self.__uri = uri
         self.__user_agent = Configuration().get_user_agent()
         self.__proxy = Configuration().get_http_proxy()
+
+        headers = kwargs.get('headers')
+        if not headers:
+            return
+
+        for (name,value) in headers.items():
+            if name == 'xhr' and value:
+                # set XMLHttpRequest headers
+                self.__headers['X_REQUESTED_WITH'] = 'XMLHttpRequest'
+                self.__headers['ACCEPT'] = 'text/javascript, text/html, application/xml, text/xml, */*'
+                self.__content_type = 'application/x-www-form-urlencoded; charset=UTF-8'
+            else:
+                self.__headers[name] = value
 
     def getheaders(self):
         return self.__headers
@@ -406,16 +420,6 @@ class HttpMethodBase:
         @param uri: URI of the target resource.
         """
         self.__uri = uri
-
-    def set_xmlhttprequest(self):
-        """Sets the method to appear like XMLHttpRequest.
-        """
-        self.set_request_header(
-            'X_REQUESTED_WITH', 'XMLHttpRequest')
-        self.set_request_header(
-            'ACCEPT', 'text/javascript, text/html, application/xml, text/xml, */*')
-        self.set_request_content_type(
-            'application/x-www-form-urlencoded; charset=UTF-8')
 
     
     # The proxy code in this was inspired by
@@ -618,8 +622,8 @@ class HttpMethodWithBody(HttpMethodBase):
     """
     __body = None
     __content_type = None
-    def __init__(self, uri):
-        HttpMethodBase.__init__(self, uri)
+    def __init__(self, uri, **kwargs):
+        HttpMethodBase.__init__(self, uri, **kwargs)
         
     def set_body(self, body):
         self.__body = body
@@ -645,32 +649,32 @@ class HttpMethodWithBody(HttpMethodBase):
 
 
 class GetMethod(HttpMethodBase):
-    def __init__(self, uri):
-        HttpMethodBase.__init__(self, uri)
+    def __init__(self, uri, **kwargs):
+        HttpMethodBase.__init__(self, uri, **kwargs)
         self.set_follow_redirects(Configuration().get_max_follow_redirects())
     def get_name(self):
         return 'GET'
 
 
 class DeleteMethod(HttpMethodBase):
-    def __init__(self, uri):
-        HttpMethodBase.__init__(self, uri)
+    def __init__(self, uri, **kwargs):
+        HttpMethodBase.__init__(self, uri, **kwargs)
         self.set_follow_redirects(0)
     def get_name(self):
         return 'DELETE'
     
 
 class PostMethod(HttpMethodWithBody):
-    def __init__(self, uri):
-        HttpMethodWithBody.__init__(self, uri)
+    def __init__(self, uri, **kwargs):
+        HttpMethodWithBody.__init__(self, uri, **kwargs)
         self.set_follow_redirects(0)
     def get_name(self):
         return 'POST'
 
 
 class PutMethod(HttpMethodWithBody):
-    def __init__(self, uri):
-        HttpMethodWithBody.__init__(self, uri)
+    def __init__(self, uri, **kwargs):
+        HttpMethodWithBody.__init__(self, uri, **kwargs)
         self.set_follow_redirects(0)
     def get_name(self):
         return 'PUT'

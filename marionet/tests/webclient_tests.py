@@ -178,7 +178,7 @@ class WebClientTestCase(TestCase):
         """
         client = WebClient()
         self.assert_(client)
-        response = client.post(self.junit_url+'/check_xhr',xhr=True)
+        response = client.post(self.junit_url+'/check_xhr',headers={'xhr': True})
         self.assertEqual(200, response.status)
         self.assertEqual(response.read(), 'true')
 
@@ -188,7 +188,7 @@ class WebClientTestCase(TestCase):
         client = WebClient()
         self.assert_(client)
         params = 'foo=bar&msg=test+message'
-        response = client.post(self.junit_url+'/xhr_post',params=params,xhr=True)
+        response = client.post(self.junit_url+'/xhr_post',params=params,headers={'xhr': True})
         self.assertEqual(200, response.status)
         xml = response.read()
         doc = libxml2.parseDoc(xml)
