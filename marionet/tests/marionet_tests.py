@@ -471,15 +471,34 @@ class MarionetTestCase(TestCase):
         session = MarionetSession.objects.get(id=id)
         self.assertEqual(session.get('url'), 'http://example.com')
 
-    def test_marionet_session7(self):
+    def test_marionet_session_key(self):
         """ MarionetSession with key
         """
         _session_key = 'xTZsrE3fd5f'
-        session = MarionetSession.objects.create(key=_session_key)
-        self.assert_(session)
+        portlet = Marionet.objects.create(url='', session=False)
+        (session,created) = MarionetSession.objects.get_or_create(portlet=portlet,key=_session_key)
+        self.assert_(created)
         self.assertEqual(session.user, None)
         self.assertEqual(session.key, _session_key)
         self.assert_(session.id)
+
+    def test_marionet_session_user(self):
+        """ MarionetSession with key
+        """
+        user = User.objects.create_user(username="toejam", email="toejam@funkotron", password="jammin")
+        portlet = Marionet.objects.create(url='', session=False)
+        (session,created) = MarionetSession.objects.get_or_create(portlet=portlet,user=user)
+        self.assert_(created)
+        self.assertEqual(session.user, user)
+        self.assertEqual(session.key, None)
+        self.assert_(session.id)
+        session_id = session.id
+
+        (session,created) = MarionetSession.objects.get_or_create(portlet=portlet,user=user)
+        self.assert_(not created)
+        self.assertEqual(session.user, user)
+        self.assertEqual(session.key, None)
+        self.assertEqual(session.id, session_id)
 
     def __test_session_id(self,client):
         portlet = Marionet.objects.create(url=self.junit_url+'/session_cookie', session=True)

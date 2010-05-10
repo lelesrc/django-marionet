@@ -76,20 +76,26 @@ def marionet(request,portlet_id):
     """
     portlet =  Marionet.objects.get(id=portlet_id)
     # portlet has no session
-    if not request.user.__dict__:
-        request.session.save()
-        logging.debug(' --> fetch session for key '+str(request.session._session_key))
-        session, created = MarionetSession.objects.get_or_create(
-            portlet=portlet,
-            key=request.session._session_key)
-    else:
-        logging.debug(' --> fetch session for user '+str(request.user))
-        session, created = MarionetSession.objects.get_or_create(
-            portlet=portlet,
-            user=request.user)
-    if not session:
-        logging.warn('oops, could not fetch session')
-        return HttpResponse("FAIL",status=500)
+    try:
+        if not request.user.__dict__:
+            request.session.save()
+            logging.debug(' --> fetch session for key '+str(request.session._session_key))
+            (session, created) = MarionetSession.objects.get_or_create(
+                portlet=portlet,
+                django_key=request.session._session_key)
+        else:
+            logging.debug(' --> fetch session for user '+str(request.user))
+            logging.debug(portlet)
+            (session, created) = MarionetSession.objects.get_or_create(
+                portlet=portlet,
+                user=request.user)
+        if not session:
+            logging.warn('oops, could not fetch session')
+            return HttpResponse("FAIL",status=500)
+    except:
+        logging.error(traceback.format_exc())
+
+    logging.debug(session)
 
     # attach volatile session
     portlet.session = session

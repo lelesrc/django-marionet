@@ -243,14 +243,6 @@ class Marionet(Portlet):
             # Marionet
             if not self.url:
                 self.url = self.session.get('url')
-            # MarionetSession
-            #
-            # baseURL
-            if self.session.get('baseURL') is None:
-                if self.url is not None:
-                    _url = urlparse(self.session.get('url'))
-                    self.session.set('baseURL',
-                        '%s://%s' % (_url.scheme, _url.netloc))
 
         logging.info(self.__unicode__())
         #logging.info("Marionet %s: %s, session %s" % (self.id,self.url,self.session.name))
@@ -283,6 +275,12 @@ class Marionet(Portlet):
         if context['query'] is not None:
             self.session.set('query',
                 context['query'].urlencode())
+        # baseURL
+        # XXX: security! shall we let the user go beyond the first set domain?
+        if self.url is not None:
+            _url = urlparse(self.url)
+            self.session.set('baseURL',
+                '%s://%s' % (_url.scheme, _url.netloc))
         #logging.debug(self.session)
 
         try:
@@ -321,6 +319,7 @@ class Marionet(Portlet):
                     self.title = self.session.get('title')
                     logging.info('title: '+self.title)
             logging.info('Page length: %i bytes' % (len(out)))
+            #self.session.save()
             return out
         except:
             logging.error(traceback.format_exc())
@@ -369,19 +368,19 @@ class MarionetSession(PortletSession):
     # portlet is not necessary, if initialized with url kwarg.
     portlet = models.ForeignKey(Marionet, null=True)
     # key is needed to identify, if user is not set.
-    key = models.CharField(null=True, blank=True, max_length=42, unique=False)
+    django_key = models.CharField(null=True, blank=True, max_length=42, unique=False)
 
     def __unicode__(self):
         return 'MarionetSession %s for user %s (key %s) with marionet %s ' % (
-            self.id, self.user, self.key, self.portlet_id)
+            self.id, self.user, self.django_key, self.portlet_id)
 
     def clean(self):
         """ Validation.
         """
         #from django.core.exceptions import ValidationError
-        if not self.user and not self.key:
+        if not self.user and not self.django_key:
             #raise ValidationError('No user nor key.')
-            self.key = 'anon_shared'
+            self.django_key = 'anon_shared'
 
 
 class WebClient():
@@ -763,23 +762,24 @@ class PageProcessor(Singleton):
         """ Parses base into href to form a complete url.
         """
         logging.debug('parsing href "%s"' % (href))
-        if base and not re.match('^http', href):
-            #logging.debug('base: %s' % (base))
-            """
-            if re.match('^/', href):
-                logging.debug('absolute path')
-                baseurl = urlparse(base)
-                return urljoin(base+'/',href)
+        if not re.match('^http', href):
+            if base:
+                #logging.debug('base: %s' % (base))
+                """
+                if re.match('^/', href):
+                    logging.debug('absolute path')
+                    baseurl = urlparse(base)
+                    return urljoin(base+'/',href)
+                else:
+                """
+                #logging.debug('relative path')
+                join = urljoin(base+'/',href)
+                _url = re.sub('(?<!:)//', '/', join)
+                #logging.debug(_url)
+                return _url
             else:
-            """
-            #logging.debug('relative path')
-            join = urljoin(base+'/',href)
-            _url = re.sub('(?<!:)//', '/', join)
-            #logging.debug(_url)
-            return _url
-        else:
-            logging.warn('portlet has no base')
-            return href
+                logging.warn('portlet has no base')
+        return href
 
     @staticmethod
     def image(obj,img,base=None):
