@@ -291,12 +291,13 @@ class Marionet(Portlet):
             ### select method and exec request
             # GET
             if self.session.get('method') == 'GET':
-                response = client.get(self.url)
+                response = client.get(self.url,
+                    headers={'xhr': self.session.get('xhr')})
             # POST
             elif self.session.get('method') == 'POST':
                 response = client.post(self.url,
                     params=self.session.get('qs'),
-                    xhr=self.session.get('xhr'))
+                    headers={'xhr': self.session.get('xhr')})
 
             if response.status != 200:
                 return '%s %s' % (response.status, response.reason)
@@ -417,22 +418,18 @@ class WebClient():
         """
         return '; '.join(map(lambda f: f[0], self.cookies.values()))
 
-    def get(self,url,referer=None,xhr=False):
+    def get(self,url,**kwargs):
         """ Executes GET request.
 
-            @param xhr emulates XMLHttpRequest.
             @returns httplib.HTTPResponse.
         """
         log.info('GET %s' % (url))
-        method = httpclient.GetMethod(url)
-        if xhr:
-            log.debug('XMLHttpRequest GET')
-            method.set_xmlhttprequest()
+        method = httpclient.GetMethod(url,**kwargs)
 
         # add cookies
         method.set_request_header('Cookie',self.cookie_headers())
-        if referer is not None:
-            method.set_request_header('Referer',referer)
+#        if referer is not None:
+#            method.set_request_header('Referer',referer) # XXX
         #log.debug(method.getheaders())
         method.execute()
         response = method.get_response()
@@ -440,17 +437,13 @@ class WebClient():
         self.update_cookies(response) # updates state
         return response
 
-    def post(self,url,params='',xhr=False):
+    def post(self,url,params='',**kwargs):
         """ Executes POST request.
 
             @param params is an urlencoded string.
-            @param xhr emulates XMLHttpRequest.
             @returns httplib.HTTPResponse.
         """
-        method = httpclient.PostMethod(url)
-        if xhr:
-            log.debug('XMLHttpRequest POST')
-            method.set_xmlhttprequest()
+        method = httpclient.PostMethod(url,**kwargs)
 
         # add parameters to request body
         method.set_body(params)
@@ -466,7 +459,9 @@ class WebClient():
         self.update_cookies(response) # updates state
         # follow redirect..
         if response.status == 302 or response.status == 301:
-            return self.get(response.getheader('Location'), xhr=xhr)
+            return self.get(response.getheader('Location'), **kwargs) # XXX
+            # maybe it is too dangerous to GET with all kwargs, should pick
+            # up just "headers['xhr']" if it exists.. 
         else:
             return response
 
