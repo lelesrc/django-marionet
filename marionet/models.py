@@ -542,7 +542,7 @@ class PageProcessor(Singleton):
             the request is the Portlet request and the response is
             the remote server response.
 
-            @returns tuple (body,metadata)
+            @returns string html
         """
         #logging.debug('processing response for portlet %s' % (portlet))
         tree = PageProcessor.parse_tree(html)
