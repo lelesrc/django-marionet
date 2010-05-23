@@ -535,6 +535,47 @@ class PageProcessor(Singleton):
 
 
     @staticmethod
+    def process(html,session,**kwargs):
+        """ Serializes the response body to a node tree,
+            extracts metadata and transforms the portlet body.
+            Context contains keys 'request' and 'response', where
+            the request is the Portlet request and the response is
+            the remote server response.
+
+            @returns tuple (body,metadata)
+        """
+        #logging.debug('processing response for portlet %s' % (portlet))
+        tree = PageProcessor.parse_tree(html)
+
+        # add portlet metadata
+        #
+        PageProcessor.append_metadata(tree,session)
+
+        # execute XSLT and collect metadata
+        #
+        html = str(PageProcessor.transform(tree,**kwargs))
+        """
+        logging.debug(' # portlet html')
+        logging.debug(html)
+        logging.debug(' # # #')
+        """
+        return html
+
+
+    @staticmethod
+    def transform(html_tree,sheet='body'):
+        """ Performs XSL transformation to HTML tree using sheet.
+            @returns lxml.etree._XSLTResultTree
+        """
+        #logging.debug(sheet+' xslt')
+        xslt_tree = PageProcessor.getInstance().sheets[sheet]
+        return etree.XSLT(xslt_tree)(
+            html_tree,
+#            foo="'bar'"  # XXX insert XSLT variables, remember if needed
+            )
+
+
+    @staticmethod
     def parse_tree(response):
         """ Parses the response HTML.
             In case the input is badly formatted HTML, the soupparser is used.
@@ -629,44 +670,6 @@ class PageProcessor(Singleton):
         logging.debug(' # # #')
         """
         return root
-
-    @staticmethod
-    def transform(html_tree,sheet='body'):
-        """ Performs XSL transformation to HTML tree using sheet.
-            @returns lxml.etree._XSLTResultTree
-        """
-        #logging.debug(sheet+' xslt')
-        xslt_tree = PageProcessor.getInstance().sheets[sheet]
-        return etree.XSLT(xslt_tree)(
-            html_tree,
-#            foo="'bar'"  # XXX insert XSLT variables, remember if needed
-            )
-    @staticmethod
-    def process(html,session,**kwargs):
-        """ Serializes the response body to a node tree,
-            extracts metadata and transforms the portlet body.
-            Context contains keys 'request' and 'response', where
-            the request is the Portlet request and the response is
-            the remote server response.
-
-            @returns tuple (body,metadata)
-        """
-        #logging.debug('processing response for portlet %s' % (portlet))
-        tree = PageProcessor.parse_tree(html)
-
-        # add portlet metadata
-        #
-        PageProcessor.append_metadata(tree,session)
-
-        # execute XSLT and collect metadata
-        #
-        html = str(PageProcessor.transform(tree,**kwargs))
-        """
-        logging.debug(' # portlet html')
-        logging.debug(html)
-        logging.debug(' # # #')
-        """
-        return html
 
 
     ### ### tag rewrite functions
