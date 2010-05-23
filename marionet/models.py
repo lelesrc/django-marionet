@@ -456,6 +456,7 @@ class PageProcessor(Singleton):
         """ Define body transformation stylesheet.
         """
         logging.debug('define xslt - this message should only appear at startup')
+        logging.warn('DEPRECATED inline XSLT -- use external file from now on')
         return etree.XML('''\
 <xsl:stylesheet version="1.0"
      xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
