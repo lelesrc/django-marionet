@@ -443,7 +443,7 @@ class PageProcessor(Singleton):
     def __init__(self,*args,**kwargs):
         """ Define available xslt sheets. 
         """
-        self.sheets = {'body': self.__body_xslt()}
+        self.sheets = {'body': self.__load_xslt('body')}
         ns = etree.FunctionNamespace('http://github.com/youleaf/django-marionet')
         ns.prefix = "marionet"
         ns['link'] = PageProcessor.link
@@ -452,86 +452,16 @@ class PageProcessor(Singleton):
         ns['form'] = PageProcessor.form
 
 
-    def __body_xslt(self):
-        """ Define body transformation stylesheet.
+    def __load_xslt(self,sheet):
+        """ Loads transformation stylesheet from external file.
         """
-        logging.debug('define xslt - this message should only appear at startup')
-        logging.warn('DEPRECATED inline XSLT -- use external file from now on')
-        return etree.XML('''\
-<xsl:stylesheet version="1.0"
-     xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-     xmlns:marionet="http://github.com/youleaf/django-marionet"
-     >
-
-    <xsl:namespace-alias stylesheet-prefix="xmlns:marionet" 
-          result-prefix=""/>
-
-    <xsl:output method="html" omit-xml-declaration="yes"/>
-
-    <!--
-    <xsl:param name="foo" required="yes" />
-    -->
-
-    <xsl:variable
-        name="location"
-        select="//*[local-name()='head']/portlet-session/@location" />
-
-    <xsl:variable
-        name="query"
-        select="//*[local-name()='head']/portlet-session/@query" />
-
-    <xsl:variable
-        name="namespace"
-        select="//*[local-name()='head']/portlet-session/@namespace" />
-
-    <xsl:variable
-        name="base"
-        select="//*[local-name()='head']/portlet-session/@baseURL" />
-
-
-    <!-- Fetch some info from head, and all of body -->
-    <xsl:template match="*[local-name()='html']">
-        <div id="{$namespace}_body">
-            <xsl:apply-templates select="*[local-name()='head']/link"/>
-            <xsl:apply-templates select="*[local-name()='head']/style"/>
-            <xsl:apply-templates select="*[local-name()='body']"/>
-        </div>
-    </xsl:template>
-
-    <xsl:template match="*[local-name()='body']">
-        <xsl:apply-templates select="node()"/>
-    </xsl:template>
-
-    <!-- Rewrite links -->
-    <xsl:template match="*[local-name()='a']">
-        <xsl:copy-of select="marionet:link(.,string($location),string($query),string($namespace),string($base))"/>
-    </xsl:template>
-
-    <!-- Rewrite image references -->
-    <xsl:template match="*[local-name()='img']">
-      <xsl:copy-of select="marionet:image(.,string($base))"/>
-    </xsl:template>
-
-    <!-- Convert link tags in head to style tags -->
-    <xsl:template match="*[local-name()='html']/head/link">
-        <style type="text/css" id="{@id}">
-        @import "<xsl:value-of select="marionet:href(string(@href),string($base))"/>";
-        </style>
-    </xsl:template>
-
-    <!-- Form POST action -->
-    <xsl:template match="*[local-name()='form']">
-        <xsl:copy-of select="marionet:form(.,string($location),string($query),string($namespace),string($base))"/>
-    </xsl:template>
-
-    <!-- Copy through everything that hasn't been modified by the processor -->
-    <xsl:template match="text()|@*|*">
-        <xsl:copy>
-          <xsl:apply-templates select="*|@*|text()"/>
-        </xsl:copy>
-    </xsl:template>
-
-</xsl:stylesheet>''')
+        logging.debug('load xslt - this message should only appear at startup')
+        import os
+        xsl_filename = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'xsl', sheet+'.xsl')
+        f = open(xsl_filename)
+        xsl = etree.XML(f.read())
+        f.close()
+        return xsl
 
 
     @staticmethod
@@ -604,6 +534,9 @@ class PageProcessor(Singleton):
     @staticmethod
     def append_metadata(root,session):
         """ Updates both root and portlet session state.
+		
+		XXX: use XSLT function for session data retrieval,
+		query the etree node given to process().
 
         For XSLT parser to obtain local variables,
         a MarionetSession etree.Element is appended
