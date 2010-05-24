@@ -41,7 +41,7 @@ class PageProcessorTestCase(TestCase):
         # trigger side effects!
         tree = PageProcessor.append_metadata(tree,portlet.session)
         #
-        out = PageProcessor.transform(tree,sheet='body')
+        out = PageProcessor.transform(tree,portlet.session)
         soup = BeautifulSoup(str(out))
         self.assert_(soup)
         # only body remains
@@ -218,6 +218,7 @@ class PageProcessorTestCase(TestCase):
         self.assert_(out)
         soup = BeautifulSoup(str(out))
         self.assert_(soup)
+        #print soup
         # absolute url
         img_url = 'http://localhost:3000/images/portlet_test_bench/rails.png'
         self.assertEqual(
@@ -234,6 +235,11 @@ class PageProcessorTestCase(TestCase):
             soup.find(id='image_relative_path').findNext('img')['src'],
             img_url
             )
+    '''
+    def test_images_relative_path_navigation(self):
+        portlet = Marionet(url='http://example.com', session=True)
+        self.fail()
+    '''
 
     def test_css(self):
         ''' CSS rewrite
@@ -359,14 +365,10 @@ class PageProcessorTestCase(TestCase):
         portlet_div = soup.find(id='%s_body' % portlet.session.get('namespace'))
         self.assert_(portlet_div)
 
-        # title + content are correct
+        # base + title + content are correct
+        self.assertEqual('http://127.0.0.10:3000/',portlet.session.get('baseURL'))
         self.assertEqual('Portlet title',portlet.session.get('title'))
         self.assertEqual('Portlet content',portlet_div.text)
-
-        # portlet is updated correctly;
-        # base set by remote host
-        #self.assertEqual('http://127.0.0.10:3000/', portlet.base)
-        #print etree.tostring(portlet.session)
 
     def test_undefined_doctype(self):
         ''' Undefined HTML doctype

@@ -292,8 +292,7 @@ class Marionet(Portlet):
             # as, fe. html/head may contain <base>
             out = PageProcessor.process(
                 response,
-                self.session,
-                sheet='body')
+                self.session)
             # get title from page
             if not self.title:
                 if self.session.get('title'):
@@ -465,7 +464,7 @@ class PageProcessor(Singleton):
 
 
     @staticmethod
-    def process(html,session,**kwargs):
+    def process(html,session):
         """ Serializes the response body to a node tree,
             extracts metadata and transforms the portlet body.
             Context contains keys 'request' and 'response', where
@@ -483,7 +482,7 @@ class PageProcessor(Singleton):
 
         # execute XSLT and collect metadata
         #
-        html = str(PageProcessor.transform(tree,**kwargs))
+        html = str(PageProcessor.transform(tree,session))
         """
         logging.debug(' # portlet html')
         logging.debug(html)
@@ -493,15 +492,17 @@ class PageProcessor(Singleton):
 
 
     @staticmethod
-    def transform(html_tree,sheet='body'):
+    def transform(html_tree,session):
         """ Performs XSL transformation to HTML tree using sheet.
             @returns lxml.etree._XSLTResultTree
         """
-        #logging.debug(sheet+' xslt')
-        xslt_tree = PageProcessor.getInstance().sheets[sheet]
+        xslt_tree = PageProcessor.getInstance().sheets['body']
         return etree.XSLT(xslt_tree)(
             html_tree,
-#            foo="'bar'"  # XXX insert XSLT variables, remember if needed
+            namespace="'%s'" % session.get('namespace'),
+            location="'%s'" % session.get('location'),
+            query="'%s'" % session.get('query'),
+            base="'%s'" % session.get('baseURL'),
             )
 
 
@@ -533,17 +534,8 @@ class PageProcessor(Singleton):
 
     @staticmethod
     def append_metadata(root,session):
-        """ Updates both root and portlet session state.
-		
-		XXX: use XSLT function for session data retrieval,
-		query the etree node given to process().
+        """ Updates portlet session state to reflect html metadata.
 
-        For XSLT parser to obtain local variables,
-        a MarionetSession etree.Element is appended
-        to /html/head/portlet-session.
-
-        MarionetSession session, as a side-effect, is a
-        updated to reflect html metadata.
         * base => @baseURL
         * title
         * 
@@ -593,9 +585,9 @@ class PageProcessor(Singleton):
                 _content[0].attrib['content'])
         """
         #
-        # append
+        # append (DEPRECATED)
         #
-        head.append(session._Element)
+        #head.append(session._Element)
 
         """
         logging.debug(' # new head')

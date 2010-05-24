@@ -8,25 +8,11 @@
 
     <xsl:output method="html" omit-xml-declaration="yes"/>
 
-    <!--
-    <xsl:param name="foo" required="yes" />
-    -->
 
-    <xsl:variable
-        name="location"
-        select="//*[local-name()='head']/portlet-session/@location" />
-
-    <xsl:variable
-        name="query"
-        select="//*[local-name()='head']/portlet-session/@query" />
-
-    <xsl:variable
-        name="namespace"
-        select="//*[local-name()='head']/portlet-session/@namespace" />
-
-    <xsl:variable
-        name="base"
-        select="//*[local-name()='head']/portlet-session/@baseURL" />
+    <xsl:param name="namespace" />
+    <xsl:param name="location" />
+    <xsl:param name="query" />
+    <xsl:param name="base" />
 
 
     <!-- Fetch some info from head, and all of body -->
