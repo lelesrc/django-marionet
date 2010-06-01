@@ -48,7 +48,7 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual('div', soup.find().name)
         self.assertEqual(None, soup.find('head'))
         # namespace is correct
-        portlet_div = soup.find(id='%s_body' % portlet.session.get('namespace'))
+        portlet_div = soup.find('div', {'class': '%s_body' % portlet.session.get('namespace')})
         self.assert_(portlet_div)
 
     def test_parse_tree(self):
@@ -129,7 +129,7 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual('div', soup.find().name)
         self.assertEqual(None, soup.find('head'))
         # namespace is correct
-        portlet_div = soup.find(id='%s_body' % portlet.session.get('namespace'))
+        portlet_div = soup.find('div', {'class': '%s_body' % portlet.session.get('namespace')})
         self.assert_(portlet_div)
 
     def test_append_metadata(self):
@@ -214,6 +214,7 @@ class PageProcessorTestCase(TestCase):
         self.assert_(client)
         response = client.get(url)
         self.assertEqual(200, response.status)
+        portlet.session.set('location', 'http://example.com:8000/some-page')
         out = PageProcessor.process(response,portlet.session)
         self.assert_(out)
         soup = BeautifulSoup(str(out))
@@ -282,7 +283,7 @@ class PageProcessorTestCase(TestCase):
     def test_links(self):
         ''' Link rewrite
         '''
-        url = self.junit_url+'/basic_tags'
+        url = self.junit_url+'/links'
         portlet = Marionet.objects.create(url=url, session=True)
         # get test data
         client = WebClient()
@@ -300,48 +301,6 @@ class PageProcessorTestCase(TestCase):
             link.get('href') 
             )
 
-    def test_link(self):
-        # XSLT returns this form
-        location = 'http://example.com:8000/some-page'
-        query = ''
-        anchor = [etree.fromstring('<a href="/caterpillar/test_bench">Link text</a>')]
-        namespace = '__portlet__'
-        link = PageProcessor.link(None,
-            anchor,
-            location,
-            query,
-            namespace,
-            self.junit_base
-            )[0] # take 1st _Element
-        self.assertEqual(
-            link.get('href'),
-            'http://example.com:8000/some-page?__portlet__.href=http%3A//localhost%3A3000/caterpillar/test_bench')
-        #print etree.tostring(link)
-
-    def test_form(self):
-        # XSLT returns this form
-        location = 'http://example.com:8000/some-page'
-        query = ''
-        form = [etree.fromstring('''
-            <form action="/caterpillar/test_bench/http_methods/post" method="post">
-              <p>
-                <span>Input text:</span>
-                <input id="msg" name="msg" size="42" type="text" value="Python was conceived in the late 1980s and its implementation was started in December 1989 by Guido van Rossum" />
-              </p>
-            </form>
-            ''')]
-
-        namespace = '__portlet__'
-        _form = PageProcessor.form(None,
-            form,
-            location,
-            query,
-            namespace,
-            self.junit_base
-            )[0] # take 1st _Element
-        self.assertEqual(
-            _form.get('action'),
-            'http://example.com:8000/some-page?__portlet__.href=http%3A//localhost%3A3000/caterpillar/test_bench/http_methods/post&__portlet__.action=process')
 
     def __test_doctype(self,type):
         ''' Same test for different DOCTYPEs
@@ -362,7 +321,7 @@ class PageProcessorTestCase(TestCase):
         self.assertEqual('div', soup.find().name)
         self.assertEqual(None, soup.find('head'))
         # namespace is correct
-        portlet_div = soup.find(id='%s_body' % portlet.session.get('namespace'))
+        portlet_div = soup.find('div', {'class': '%s_body' % portlet.session.get('namespace')})
         self.assert_(portlet_div)
 
         # base + title + content are correct

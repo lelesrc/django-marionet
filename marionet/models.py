@@ -166,7 +166,7 @@ class PortletFilter():
                         href = query.__getitem__(key)
                         # rewrite url
                         base = portlet.session.get('baseURL')
-                        url = PageProcessor.href(None,href,base)
+                        url = PageTransformer.href(None,href,base)
                         # update portlet
                         portlet.url = unquote(url)
                         logging.debug('new url: %s' % (portlet.url))
@@ -256,12 +256,6 @@ class Marionet(Portlet):
         if context['query'] is not None:
             self.session.set('query',
                 context['query'].urlencode())
-        # baseURL
-        # XXX: security! shall we let the user go beyond the first set domain?
-        if self.url is not None:
-            _url = urlparse(self.url)
-            self.session.set('baseURL',
-                '%s://%s' % (_url.scheme, _url.netloc))
         #logging.debug(self.session)
 
         try:
@@ -330,6 +324,26 @@ class MarionetSession(PortletSession):
     portlet = models.ForeignKey(Marionet, null=True)
     # key is needed to identify, if user is not set.
     django_key = models.CharField(null=True, blank=True, max_length=42, unique=False)
+
+    def __init__(self,*args,**kwargs):
+        super(MarionetSession, self).__init__(*args,**kwargs)
+        # set base url
+        if self.get('baseURL') is None:
+            url = None
+            if 'url' in kwargs:
+                url = urlparse(kwargs.get('url'))
+        
+            elif self.portlet is not None:
+                url = urlparse(self.portlet.url)
+
+            logging.debug(url)
+
+            if url is not None:
+                # XXX: security! shall we let the user go beyond the first set domain?
+                base_url = '%s://%s' % (url.scheme, url.netloc)
+                self.set('baseURL', base_url)
+                logging.debug('base url: ' + base_url)
+        
 
     def __unicode__(self):
         return 'MarionetSession %s for user %s (key %s) with marionet %s ' % (
@@ -445,10 +459,10 @@ class PageProcessor(Singleton):
         self.sheets = {'body': self.__load_xslt('body')}
         ns = etree.FunctionNamespace('http://github.com/youleaf/django-marionet')
         ns.prefix = "marionet"
-        ns['link'] = PageProcessor.link
-        ns['image'] = PageProcessor.image
-        ns['href'] = PageProcessor.href
-        ns['form'] = PageProcessor.form
+        ns['link'] = PageTransformer.link
+        ns['image'] = PageTransformer.image
+        ns['href'] = PageTransformer.href
+        ns['form'] = PageTransformer.form
 
 
     def __load_xslt(self,sheet):
@@ -474,6 +488,7 @@ class PageProcessor(Singleton):
             @returns string html
         """
         #logging.debug('processing response for portlet %s' % (portlet))
+        logging.debug(session)
         tree = PageProcessor.parse_tree(html)
 
         # add portlet metadata
@@ -496,13 +511,12 @@ class PageProcessor(Singleton):
         """ Performs XSL transformation to HTML tree using sheet.
             @returns lxml.etree._XSLTResultTree
         """
+        logging.debug(etree.tostring(session._Element))
         xslt_tree = PageProcessor.getInstance().sheets['body']
+        #print session._Element.xpath('.')
         return etree.XSLT(xslt_tree)(
             html_tree,
-            namespace="'%s'" % session.get('namespace'),
-            location="'%s'" % session.get('location'),
-            query="'%s'" % session.get('query'),
-            base="'%s'" % session.get('baseURL'),
+            session = etree.XSLT.strparam(etree.tostring(session._Element))
             )
 
 
@@ -540,6 +554,7 @@ class PageProcessor(Singleton):
         * title
         * 
         """
+        logging.debug("append metadata")
         #
         # get xmlns
         #
@@ -561,7 +576,7 @@ class PageProcessor(Singleton):
         #
         # base url
         #
-        head_base = head.find('base')
+        head_base = head.find('{%s}base' % xmlns)
         if head_base is not None:
             base = head_base.get('href')
             logging.debug('found head base %s' % (base))
@@ -585,9 +600,9 @@ class PageProcessor(Singleton):
                 _content[0].attrib['content'])
         """
         #
-        # append (DEPRECATED)
+        # append session metadata for the XSLT parser
         #
-        #head.append(session._Element)
+        head.append(session._Element)
 
         """
         logging.debug(' # new head')
@@ -597,28 +612,33 @@ class PageProcessor(Singleton):
         return root
 
 
-    ### ### tag rewrite functions
+class PageTransformer():
+    """ Tag rewrite functions.
+    """
 
     @staticmethod
-    def link(obj,anchor,location,query,namespace,base=None):
+    def link(obj,anchor,session):
         """ Ordinary hyperlink.
         
             TODO: test "javascript:" and "#"
         """
         logging.debug('anchor: %s' % etree.tostring(anchor[0]))
-
+        #logging.debug(etree.tostring(session[0]))
         href = anchor[0].get('href')
         if not href:
             return anchor
+            
 
+        base = session[0].get('baseURL')
         if base is not None:
             # rewrite url
-            href = PageProcessor.href(None,href,base)
+            href = PageTransformer.href(None,href,base)
+            logging.debug(href)
 
         url = PortletURL.render_url(
-            location = urlsplit(location),
-            query = QueryDict(query),
-            namespace = namespace,
+            location = urlsplit(session[0].get('location')),
+            query = QueryDict(session[0].get('query')),
+            namespace = session[0].get('namespace'),
             href = href,
             params = {},
             method = 'GET'
@@ -628,18 +648,21 @@ class PageProcessor(Singleton):
         return anchor
 
     @staticmethod
-    def form(obj,form,location,query,namespace,base=None):
+    def form(obj,form,session):
         logging.debug('form: %s' % etree.tostring(form[0]))
         action = form[0].get('action')
         if not action:
             return form
+
+        base = session[0].get('baseURL')
         if base is not None:
-            action = PageProcessor.href(None,action,base)
+            # rewrite url
+            action = PageTransformer.href(None,action,base)
 
         url = PortletURL.action_url(
-            location = urlsplit(location),
-            query = QueryDict(query),
-            namespace = namespace,
+            location = urlsplit(session[0].get('location')),
+            query = QueryDict(session[0].get('query')),
+            namespace = session[0].get('namespace'),
             href = action,
             params = {}, # got from form?
             method = 'POST'
@@ -673,11 +696,25 @@ class PageProcessor(Singleton):
         return href
 
     @staticmethod
-    def image(obj,img,base=None):
+    def image(obj,img,session):
         """ Alters the img tag. """
         #logging.debug('image: %s' % etree.tostring(img[0]))
-        src = img[0].get('src')
-        url = PageProcessor.href(None,src,base)
-        img[0].set('src',url)
+        base = session[0].get('baseURL')
+        if base:
+            src = img[0].get('src')
+            url = PageTransformer.href(None,src,base)
+            img[0].set('src',url)
         return img
+
+    @staticmethod
+    def input(obj,xsl_nodes,xsl_session):
+        """ Alters the input tag. """
+        #logging.debug('input: %s' % etree.tostring(xsl_nodes[0]))
+        onclick = xsl_nodes[0].get('onclick')
+        base = xsl_session[0].get('baseURL')
+        if onclick:
+            logging.debug('input onclick: '+onclick)
+            # XXX: parse input
+            #xsl_nodes[0].set('onclick',____)
+        return xsl_nodes
 
