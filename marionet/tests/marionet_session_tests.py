@@ -91,12 +91,12 @@ class MarionetSessionTestCase(TestCase):
         self.assertEqual(portlet.session, None)
         # but the session should exist in the database
         session = MarionetSession.objects.get(portlet=portlet, user=user)
-        portlet_body_id = '%s_body' % session.get('namespace')
         self.assert_(session)
         self.assertEqual(session.user_id, user.id)
         # does the portlet output the correct namespace?
         soup = BeautifulSoup(response.content)
-        portlet_div = soup.find(id=portlet_body_id)
+        portlet_body_class = '%s_body' % session.get('namespace')
+        portlet_div = soup.find('div', {'class': portlet_body_class})
         self.assert_(portlet_div)
 
         # request again to see that the view loads the correct session,
@@ -105,7 +105,7 @@ class MarionetSessionTestCase(TestCase):
         response = c.get('/marionet/%s/' % portlet.id)
         self.assertEqual(response.status_code, 200)
         soup = BeautifulSoup(response.content)
-        portlet_div = soup.find(id=portlet_body_id)
+        portlet_div = soup.find('div', {'class': portlet_body_class})
         self.assert_(portlet_div)
 
     def test_marionet_session4(self):

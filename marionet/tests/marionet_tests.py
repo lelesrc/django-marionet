@@ -118,7 +118,7 @@ class MarionetTestCase(TestCase):
         self.assertEqual(soup.find().name, 'div')
         self.assertEqual(soup.find('head'), None)
         # namespace is correct
-        portlet_div = soup.find(id='%s_body' % portlet.session.get('namespace'))
+        portlet_div = soup.find('div', {'class': '%s_body' % portlet.session.get('namespace')})
         self.assert_(portlet_div)
 
     def __test_target1(self,portlet,href):
@@ -146,7 +146,7 @@ class MarionetTestCase(TestCase):
         self.assertEqual(soup.find().name, 'div')
         self.assertEqual(soup.find('head'), None)
         # namespace is correct
-        portlet_div = soup.find(id='%s_body' % portlet.session.get('namespace'))
+        portlet_div = soup.find('div', {'class': '%s_body' % portlet.session.get('namespace')})
         self.assert_(portlet_div)
         link = portlet_div.find('a')
         self.assert_(link)
@@ -221,7 +221,7 @@ class MarionetTestCase(TestCase):
         self.assertEqual(soup.find().name, 'div')
         self.assertEqual(soup.find('head'), None)
         # namespace is correct
-        portlet_div = soup.find(id='%s_body' % ns)
+        portlet_div = soup.find('div', {'class': '%s_body' % ns})
         self.assert_(portlet_div)
         msg = portlet_div.find(id='post_msg')
         self.assertEqual(msg.text, params['msg'])

@@ -9,7 +9,8 @@ from marionet.tests.utils import RequestFactory
 from lxml import etree
 from BeautifulSoup import BeautifulSoup
 import re
-from urlparse import urljoin
+from urlparse import urlparse, urljoin
+from cgi import parse_qs
 
 
 class ResponseMock():
@@ -44,24 +45,24 @@ class PageTransformerTestCase(TestCase):
                 session.get('namespace')+
                 '.href=http%3A//localhost%3A3000/caterpillar/test_bench')
 
-        ## with baseurl
-
+    def test_link_with_baseurl(self):
+        anchor = [etree.fromstring('<a href="/caterpillar/test_bench">Link text</a>')]
+        session = MarionetSession.objects.create(
+            url = self.junit_url
+            )
+        ctx_location = 'http://example.com:8000/some-page'
+        session.set('location', ctx_location)
         session.set('baseURL', 'http://some-other:3000/')
+
         link = PageTransformer.link(None,
             anchor,
             [session]
             )[0] # take 1st _Element
-        print(link.get('href'))
-        print(ctx_location+'?'+
-                session.get('namespace')+
-                '.href=http%3A//localhost%3A3000/caterpillar/test_bench')
-        #return
         self.assertEqual(
             link.get('href'),
             ctx_location + '?'+
                 session.get('namespace')+
                 '.href=http%3A//some-other%3A3000/caterpillar/test_bench')
-        #print etree.tostring(link)
 
     def test_form(self):
         form = [etree.fromstring("""
@@ -75,16 +76,26 @@ class PageTransformerTestCase(TestCase):
         session = MarionetSession.objects.create(
             location = 'http://example.com:8000/some-page',
             query = '',
-            base = self.junit_base,
+            baseURL = self.junit_base,
             )
 
         _form = PageTransformer.form(None,
             form,
             [session]
             )[0] # take 1st _Element
+        action = urlparse(_form.get('action'))
+        self.assertEqual(action.netloc, 'example.com:8000')
+        query = parse_qs(action.query)
+
+        # parse_qs decodes url parameters!
         self.assertEqual(
-            _form.get('action'),
-            'http://example.com:8000/some-page?__portlet__.href=http%3A//localhost%3A3000/caterpillar/test_bench/http_methods/post&__portlet__.action=process')
+            query[session.get('namespace')+'.href'][0],
+            'http://localhost:3000/caterpillar/test_bench/http_methods/post'
+            )
+        self.assertEqual(
+            query[session.get('namespace')+'.lifecycle'][0],
+            'processAction'
+            )
 
     def test_new_Ajax(self):
         """
@@ -108,7 +119,6 @@ nclick POST" /><div id="onclick_resp"></div>
 nit/xhr_hello" method="post" onsubmit="new Ajax.Updater('form_resp', '/caterpillar/test_bench/junit/xhr_hello', {asynchronous:true, evalScripts:true, parameters
 :Form.serialize(this)}); return false;"><div><input name="commit" type="submit" value="send form POST" /></div></form><div id="form_resp"></div>
         """
-        pass
         input = [etree.fromstring("""
             <input onclick="new Ajax.Updater('onclick_resp', '/caterpillar/test_bench/junit/xhr_hello', {asynchronous:true, evalScripts:true});" type="button" value="send onclick POST" />
             """)]
@@ -126,7 +136,7 @@ nit/xhr_hello" method="post" onsubmit="new Ajax.Updater('form_resp', '/caterpill
             input,
             [session]
             )[0] # take 1st _Element
-        print _input.get('onclick')
+        #print _input.get('onclick')
         # XXX: use pyjamas?
         self.assertEqual(
             _input.get('onclick'),
