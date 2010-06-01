@@ -78,8 +78,8 @@ class PortletURL():
         """ location = ParseResult
             query = QueryDict
         """
-        logging.debug('portlet href: %s' % (href))
-        logging.debug(location)
+        #logging.debug('portlet href: %s' % (href))
+        #logging.debug(location)
         if href is None:
             return PortletURL(location, query)
         if namespace is None:
@@ -90,7 +90,7 @@ class PortletURL():
         # - since query is immutable, create a copy if needed
         _query = copy(query)
         _query.__setitem__(namespace+'.href', href)
-        logging.debug('context query: %s' % (_query))
+        #logging.debug('context query: %s' % (_query))
 
         return PortletURL(location, _query)
 
@@ -118,7 +118,7 @@ class PortletURL():
         # - since query is immutable, create a copy if needed
         _query = copy(query)
         _query.__setitem__(namespace+'.href', href)
-        _query.__setitem__(namespace+'.action', 'process')
+        _query.__setitem__(namespace+'.lifecycle', 'processAction')
         logging.debug('context query: %s' % (_query))
 
         return PortletURL(location, _query)
@@ -152,35 +152,22 @@ class PortletFilter():
             # no XHR
             portlet.session.set('xhr', '0')
             #
-            ### match portlet query directive
+            ### map portlet parameters
             #
             query = context.get('query')
             for key in query.keys():
                 namespace = portlet.session.get('namespace')
                 match = re.match('%s\.(.*)' % namespace, key)
+
                 if match is not None:
-                    directive = match.group(1)
-                    logging.debug(' * '+namespace+' '+directive)
-                    ### set URL
-                    if directive == 'href':
-                        href = query.__getitem__(key)
-                        # rewrite url
-                        base = portlet.session.get('baseURL')
-                        url = PageTransformer.href(None,href,base)
-                        # update portlet
-                        portlet.url = unquote(url)
-                        logging.debug('new url: %s' % (portlet.url))
-                    elif directive == 'action':
-                        action = query.__getitem__(key)
-                        logging.debug('portlet action '+action)
-                        ### POST
-                        if action == 'process':
-                            portlet.session.set('method', 'POST')
-                            # portlet query string from request.POST
-                            portlet.session.set('qs', context.get('post').urlencode())
-                    ### XHR
-                    elif directive == 'xhr':
-                            portlet.session.set('xhr', '1')
+                    parameter = match.group(1)
+                    logging.debug(' * '+namespace+' '+parameter)
+
+                    # call the Portlet instance setter methods,
+                    # they change the portlet state.
+                    func = getattr(portlet, parameter, None)
+                    if callable(func):
+                        func(query.__getitem__(key), context)
 
             else:
                 pass
@@ -244,7 +231,7 @@ class Marionet(Portlet):
             is inserted to the page before rendering, thus the title
             is empty...
         """
-        logging.info(" * * * render * "+self.url)
+        logging.info(" * * * render %s" % self.url)
         #logging.debug('context: %s' % (context))
 
         ### update session
@@ -257,6 +244,9 @@ class Marionet(Portlet):
             self.session.set('query',
                 context['query'].urlencode())
         #logging.debug(self.session)
+
+        if not self.url:
+            return ""
 
         try:
             client = WebClient()
@@ -304,6 +294,32 @@ class Marionet(Portlet):
         """
         return MarionetForm(instance=self, **kwargs)
 
+    def href(self, href, *args):
+        """ Set href from filter.
+        """
+        # rewrite url
+        base = self.session.get('baseURL')
+        url = PageTransformer.href(None,href,base)
+        # update self
+        self.url = unquote(url)
+        logging.debug('new url: %s' % (self.url))
+
+    def lifecycle(self, lifecycle, context):
+        """ Lifecycle. 
+        XXX: this should be filter for portlet methods, not just for render (!)
+        """
+        logging.debug('lifecycle: '+lifecycle)
+        if lifecycle == 'processAction':
+            self.session.set('method', 'POST')
+            # portlet query string from request.POST
+            self.session.set('qs', context.get('post').urlencode())
+
+    def xhr(self, *args):
+        """ XHR. """
+        logging.debug('XHR request')
+        self.session.set('xhr', '1')
+
+
 class MarionetForm(forms.ModelForm):
     """Form for Marionet.
     """
@@ -333,7 +349,7 @@ class MarionetSession(PortletSession):
             if 'url' in kwargs:
                 url = urlparse(kwargs.get('url'))
         
-            elif self.portlet is not None:
+            elif (self.portlet is not None) and (self.portlet.url is not None):
                 url = urlparse(self.portlet.url)
 
             logging.debug(url)
@@ -561,13 +577,13 @@ class PageProcessor(Singleton):
         m = re.search('{(.*)}', root.getroot().tag ) # hackish ..
         if m:
             xmlns = m.group(1)
-            #logging.debug('xmlns: '+xmlns)
+            logging.debug('xmlns: '+xmlns)
         else:
             xmlns = ''
         #
         # resolve head
         #
-        head = root.find('{%s}head' % xmlns)
+        head = root.find('//{%s}head' % xmlns)
         if head is None:
             logging.warn('OOPS no head!')
             # create new head into root
@@ -622,7 +638,7 @@ class PageTransformer():
         
             TODO: test "javascript:" and "#"
         """
-        logging.debug('anchor: %s' % etree.tostring(anchor[0]))
+        #logging.debug('anchor: %s' % etree.tostring(anchor[0]))
         #logging.debug(etree.tostring(session[0]))
         href = anchor[0].get('href')
         if not href:

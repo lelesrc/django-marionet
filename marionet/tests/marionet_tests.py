@@ -121,6 +121,22 @@ class MarionetTestCase(TestCase):
         portlet_div = soup.find('div', {'class': '%s_body' % portlet.session.get('namespace')})
         self.assert_(portlet_div)
 
+    def test_render_filter_href(self):
+        portlet = Marionet.objects.create(session=True)
+        self.assert_(portlet)
+        url = self.junit_base+'/caterpillar/test_bench/'
+        query = {
+            '%s.href' % (portlet.session.get('namespace')): url
+        }
+        path = '/page/1'
+        request = RequestFactory().get(path,query)
+        context = RequestContext(request)
+
+        out = portlet.render(context)
+
+        self.assertEqual(portlet.url, url)
+        self.assertEqual(portlet.title, 'Rails-portlet testbench')
+
     def __test_target1(self,portlet,href):
         # make a query string
         query = {
